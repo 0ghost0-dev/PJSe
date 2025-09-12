@@ -1,0 +1,9 @@
+{
+  "symbol": "PJSe_Index",
+  "name": "PJSe 지수",
+  "detail": "Project. Stock Exchange 종합지수입니다.",
+  "url": "https://example.com",
+  "logo": "https://example.com/logo.png",
+  "market": "PJSe",
+  "type": "index"
+}

@@ -1,0 +1,12 @@
+{
+  "symbol": "sml",
+  "name": "샘플주식회사",
+  "detail": "샘플 주식 회사입니다.",
+  "url": "https://example.com",
+  "logo": "https://example.com/logo.png",
+  "market": "PJSe",
+  "type": "stock",
+  "minimum_order_quantity": 1,
+  "tick_size": 50,
+  "disabled": [false, ""]
+}
