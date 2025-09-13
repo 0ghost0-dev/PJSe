@@ -15,6 +15,21 @@
 - [ ] 거래 내역(원시 데이터) 기록 및 조회
 - [ ] 관리자 기능 (유저(브로커) 관리, 티커 관리 등)
 ---
+## .env 파일 설정
+```
+SALT=
+# Swagger API 문서 접근용 계정
+SWAGGER_USER=
+SWAGGER_PASSWORD=
+# ACID 중요 데이터 보관용 PostgreSQL DB 설정
+POSTGRES_DB_HOST=localhost
+POSTGRES_DB_PORT=5432
+POSTGRES_DB_USER=postgres
+POSTGRES_DB_PASSWORD=1234
+POSTGRES_DB_NAME=exchange_data
+POSTGRES_DB_SSLMODE=disable
+```
+---
 ## 기술 스택
 - Go (Golang)
 - Fiber (웹 프레임워크)
