@@ -1,0 +1,384 @@
+basePath: /
+definitions:
+  postgres.User:
+    properties:
+      CreatedAt:
+        type: string
+      Email:
+        type: string
+      Password:
+        description: Must be hashed
+        type: string
+      accType:
+        description: '"admin" or "standard"'
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 이것은 Project. Stock Exchange API 문서입니다.
+  license:
+    name: MIT
+    url: https://github.com/0ghost0-dev/PJSe/blob/master/license
+  title: Project. Stock Exchange API
+  version: "1.0"
+paths:
+  /api/v1/admin/user:
+    get:
+      description: 모든 유저의 [ID, 이름, 활성화 여부] 목록을 배열로 반환합니다.
+      parameters:
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 유저 목록 반환
+          schema:
+            additionalProperties:
+              items:
+                type: integer
+              type: array
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 등록된 모든 유저 목록 반환
+      tags:
+      - Admin - User
+    post:
+      description: 새로운 유저 등록에 사용할 수 있는 액세스 코드를 생성합니다.
+      parameters:
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 성공 시 액세스 코드 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 새로운 유저 등록용 액세스 코드 생성
+      tags:
+      - Admin - User
+  /api/v1/admin/user/{id}:
+    get:
+      description: 특정 유저의 상세 정보를 반환합니다.
+      parameters:
+      - description: 유저 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 유저 상세 정보 반환
+          schema:
+            $ref: '#/definitions/postgres.User'
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 유저를 찾을 수 없을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 특정 유저의 상세 정보 반환
+      tags:
+      - Admin - User
+  /api/v1/admin/user/{id}/activate:
+    patch:
+      description: 특정 유저를 활성화합니다. 활성화된 유저는 로그인 및 API 접근이 가능합니다.
+      parameters:
+      - description: 유저 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 성공 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 유저를 찾을 수 없을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 유저 활성화
+      tags:
+      - Admin - User
+  /api/v1/admin/user/{id}/deactivate:
+    patch:
+      description: 특정 유저를 비활성화합니다. 비활성화된 유저는 로그인 및 API 접근이 불가능합니다.
+      parameters:
+      - description: 유저 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 성공 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 유저를 찾을 수 없을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 유저 비활성화
+      tags:
+      - Admin - User
+  /api/v1/auth/:
+    get:
+      description: 유효한 계정으로 인증된 경우 "Authenticated" 메시지와 유저 정보를 반환합니다.
+      parameters:
+      - description: Basic {base64_encoded_credentials}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 인증 메시지 및 유저 정보 반환
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 권한 없음 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 인증 테스트
+      tags:
+      - Auth
+    post:
+      consumes:
+      - application/json
+      description: 새로운 유저를 등록합니다. (현재 미구현)
+      parameters:
+      - description: '유저 등록 정보 (예: 이메일, 비밀번호)'
+        in: body
+        name: user
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 성공 시 등록된 유저 정보 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 유저 등록
+      tags:
+      - Auth
+  /api/v1/auth/token:
+    post:
+      description: 인증된 유저를 위해 새로운 API 키를 생성합니다. (임시 키, 24시간 유효)
+      parameters:
+      - description: Basic {base64_encoded_credentials}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 새로운 API 키 및 정보 반환
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 권한 없음 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 임시 API 키 생성
+      tags:
+      - Auth
+  /api/v1/health:
+    get:
+      consumes:
+      - application/json
+      description: 서버 상태 확인 및 데이터베이스 연결 상태 점검
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 서버 상태 반환
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 서버 상태 확인
+      tags:
+      - Health
+    post:
+      consumes:
+      - application/json
+      description: API 키 상태 확인 및 서버 상태 확인
+      parameters:
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 서버 상태 및 API 키 정보 반환
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties: true
+            type: object
+      summary: API 키 상태 확인 및 서버 상태 확인
+      tags:
+      - Health
+swagger: "2.0"

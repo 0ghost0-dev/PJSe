@@ -1,0 +1,153 @@
+package v1
+
+import (
+	"PJS_Exchange/app"
+	"PJS_Exchange/databases/postgres"
+	"PJS_Exchange/middleware"
+	"PJS_Exchange/utils"
+	"context"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
+)
+
+type AuthRouter struct{}
+
+func (ar *AuthRouter) RegisterRoutes(router fiber.Router) {
+	authGroup := router.Group("/auth")
+
+	authGroup.Use(limiter.New(limiter.Config{
+		Max:        5, // 최대 요청 수
+		Expiration: 15 * time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Too many requests",
+				"code":  fiber.StatusTooManyRequests,
+			})
+		},
+	}))
+
+	authGroup.Get("/", middleware.AuthMiddleware(), ar.authTest)
+	authGroup.Post("/", ar.registerUser)
+	authGroup.Post("/token", middleware.AuthMiddleware(), ar.generateTempAPIKey)
+}
+
+// === 핸들러 함수들 ===
+
+// @Summary		인증 테스트
+// @Description	유효한 계정으로 인증된 경우 "Authenticated" 메시지와 유저 정보를 반환합니다.
+// @Tags			Auth
+// @Produce		json
+// @Param			Authorization	header		string				true	"Basic {base64_encoded_credentials}"
+// @Success		200				{object}	map[string]interface{}	"성공 시 인증 메시지 및 유저 정보 반환"
+// @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
+// @Failure		403				{object}	map[string]string	"권한 없음 시 에러 메시지 반환"
+// @Router			/api/v1/auth/ [get]
+func (ar *AuthRouter) authTest(c *fiber.Ctx) error {
+	user := c.Locals("user").(*postgres.User)
+	return c.Status(200).JSON(fiber.Map{
+		"message": "Authenticated",
+		"user": fiber.Map{
+			"id":    user.ID,
+			"email": user.Email,
+			"type":  user.AccType,
+		},
+	})
+}
+
+// @Summary		유저 등록
+// @Description	새로운 유저를 등록합니다. (현재 미구현)
+// @Tags			Auth
+// @Accept		json
+// @Produce		json
+// @Param			user	body		map[string]string	true	"유저 등록 정보 (예: 이메일, 비밀번호)"
+// @Success		201		{object}	map[string]string	"성공 시 등록된 유저 정보 반환"
+// @Failure		400		{object}	map[string]string	"잘못된 요청 시 에러 메시지 반환"
+// @Failure		500		{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Router			/api/v1/auth/ [post]
+func (ar *AuthRouter) registerUser(c *fiber.Ctx) error {
+	var req struct {
+		Username   string `json:"username"`
+		Email      string `json:"email"`
+		Password   string `json:"password"`
+		AccessCode string `json:"accessCode"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid JSON body",
+		})
+	}
+
+	ctx := context.Background()
+	pw, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to hash password",
+			"code":  fiber.StatusInternalServerError,
+		})
+	}
+	user, err := app.GetApp().UserRepo().CreateUser(ctx, req.Username, req.Email, pw, req.AccessCode)
+	if err != nil {
+		// 만약 err 내용에 "failed to validate accept code"가 포함되어 있으면 400 반환
+		if strings.Contains(err.Error(), "failed to validate accept code") || strings.Contains(err.Error(), "invalid or used accept code") {
+			//fmt.Println("Invalid or used access code:", err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid or used access code",
+				"code":  fiber.StatusBadRequest,
+			})
+		} else {
+			fmt.Println("Error creating user:", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to create user",
+				"code":  fiber.StatusInternalServerError,
+			})
+		}
+	}
+	fmt.Println("User created:", user.Username)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"username": user.Username,
+		"email":    user.Email,
+		"enabled":  user.Enabled,
+	})
+}
+
+// @Summary		임시 API 키 생성
+// @Description	인증된 유저를 위해 새로운 API 키를 생성합니다. (임시 키, 24시간 유효)
+// @Tags			Auth
+// @Produce		json
+// @Param			Authorization	header		string				true	"Basic {base64_encoded_credentials}"
+// @Success		200				{object}	map[string]interface{}	"성공 시 새로운 API 키 및 정보 반환"
+// @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
+// @Failure		403				{object}	map[string]string	"권한 없음 시 에러 메시지 반환"
+// @Failure		500				{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Router			/api/v1/auth/token [post]
+func (ar *AuthRouter) generateTempAPIKey(c *fiber.Ctx) error {
+	user := c.Locals("user").(*postgres.User)
+	ctx := context.Background()
+
+	// 새로운 API 키 생성
+	timeA := time.Now().Add(8 * time.Hour)
+
+	var newAPIKey string
+	var apiKeyData *postgres.APIKey
+	var err error
+	if user.AccType == "admin" {
+		newAPIKey, apiKeyData, err = app.GetApp().APIKeyRepo().CreateAPIKey(ctx, strconv.Itoa(user.ID), "Temporary Auth API Key (Admin)", postgres.APIKeyScope{APIKeyRead: true, APIKeyWrite: true, AdminAPIKeyManage: true, AdminSymbolManage: true, AdminUserManage: true, AdminSystemWrite: true, AdminSystemRead: true}, &timeA)
+	} else {
+		newAPIKey, apiKeyData, err = app.GetApp().APIKeyRepo().CreateAPIKey(ctx, strconv.Itoa(user.ID), "Temporary Auth API Key", postgres.APIKeyScope{APIKeyRead: true, APIKeyWrite: true}, &timeA)
+	}
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to generate API key",
+		})
+	}
+	return c.Status(200).JSON(fiber.Map{
+		"apiKey": newAPIKey,
+		"scope":  postgres.FilterTrueScopes(postgres.APIScopeToMap(apiKeyData.Scopes)),
+		"expiry": timeA.Format(time.RFC3339),
+	})
+}

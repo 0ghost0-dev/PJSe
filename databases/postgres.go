@@ -24,12 +24,12 @@ type PostgresDBConfig struct {
 
 func NewPostgresDBConfig() *PostgresDBConfig {
 	return &PostgresDBConfig{
-		Host:            utils.GetEnv("USER_DB_HOST", "localhost"),
-		Port:            utils.GetEnv("USER_DB_PORT", "5432"),
-		User:            utils.GetEnv("USER_DB_USER", "postgres"),
-		Password:        utils.GetEnv("USER_DB_PASSWORD", "1234"),
-		DBName:          utils.GetEnv("USER_DB_NAME", "exchange_data"),
-		SSLMode:         utils.GetEnv("USER_DB_SSLMODE", "disable"),
+		Host:            utils.GetEnv("POSTGRES_DB_HOST", "localhost"),
+		Port:            utils.GetEnv("POSTGRES_DB_PORT", "5432"),
+		User:            utils.GetEnv("POSTGRES_DB_USER", "postgres"),
+		Password:        utils.GetEnv("POSTGRES_DB_PASSWORD", "1234"),
+		DBName:          utils.GetEnv("POSTGRES_DB_NAME", "exchange_data"),
+		SSLMode:         utils.GetEnv("POSTGRES_DB_SSLMODE", "disable"),
 		MaxConns:        30,
 		MinConns:        5,
 		MaxConnLifetime: time.Hour,
@@ -51,7 +51,7 @@ func NewPostgresDBPool(cfg *PostgresDBConfig) (*PostgresDBPool, error) {
 
 	poolConfig, err := pgxpool.ParseConfig(cfg.getConnectionString())
 	if err != nil {
-		fmt.Println("Failed to parse User DB config:", err)
+		fmt.Println("Failed to parse Postgres DB config:", err)
 		return nil, err
 	}
 
@@ -62,19 +62,19 @@ func NewPostgresDBPool(cfg *PostgresDBConfig) (*PostgresDBPool, error) {
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		fmt.Println("Failed to create User DB pool:", err)
+		fmt.Println("Failed to create Postgres DB pool:", err)
 		return nil, err
 	}
 
 	// 연결 테스트
 	err = pool.Ping(ctx)
 	if err != nil {
-		fmt.Println("Failed to connect to User DB:", err)
+		fmt.Println("Failed to connect to Postgres DB:", err)
 		pool.Close()
 		return nil, err
 	}
 
-	fmt.Println("Connected to User DB successfully")
+	fmt.Println("Connected to Postgres DB successfully")
 	return &PostgresDBPool{pool: pool}, nil
 }
 

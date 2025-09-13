@@ -1,5 +1,6 @@
 {
   "name": "Project. Stock Exchange",
+  "short_name": "PJSe",
   "country": "KR",
   "default_currency": "KRW",
   "default_UTC_offset": 9,
@@ -10,6 +11,7 @@
   ],
   "url": "https://example.com",
   "logo": "https://example.com/logo.png",
+  "description": "Project. Stock Exchange is a fictional stock exchange used for demonstration purposes.",
   "pre_market_sessions": {
     "monday": { "open": null, "close": null },
     "tuesday": { "open": null, "close": null },
