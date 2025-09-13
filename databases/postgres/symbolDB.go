@@ -1,0 +1,100 @@
+package postgres
+
+import (
+	"PJS_Exchange/databases"
+	"context"
+	"encoding/json"
+	"fmt"
+)
+
+const (
+	StatusActive    = "active"
+	StatusInactive  = "inactive"
+	StatusSuspended = "suspended"
+	StatusDelisted  = "delisted"
+)
+
+type Status struct {
+	Status string `json:"status"` // "active", "inactive", "suspended", "delisted"
+	Reason string `json:"reason"` // 거래정지 혹은 상장폐지 사유
+}
+
+type Symbol struct {
+	ID                   int     `json:"id"`
+	Symbol               string  `json:"symbol"`
+	Name                 string  `json:"name"`
+	Detail               string  `json:"detail"`
+	Url                  string  `json:"url"`
+	Logo                 string  `json:"logo"`
+	Market               string  `json:"market"`
+	Type                 string  `json:"type"` // "stock", "index" 등
+	MinimumOrderQuantity float32 `json:"minimum_order_quantity"`
+	TickSize             float32 `json:"tick_size"`
+	Status               Status  `json:"status"`
+}
+
+type SymbolRepository interface {
+}
+
+type SymbolDBRepository struct {
+	db *databases.PostgresDBPool
+}
+
+func NewSymbolRepository(db *databases.PostgresDBPool) *SymbolDBRepository {
+	return &SymbolDBRepository{db: db}
+}
+
+func (r *SymbolDBRepository) CreateSymbolsTable(ctx context.Context) error {
+	query := `
+	CREATE TABLE IF NOT EXISTS symbols (
+		id SERIAL PRIMARY KEY,
+		symbol VARCHAR(20) UNIQUE NOT NULL,
+		name VARCHAR(100) NOT NULL,
+		detail TEXT,
+		url TEXT,
+		logo TEXT,
+		market VARCHAR(50),
+		type VARCHAR(50),
+		minimum_order_quantity REAL DEFAULT 1,
+		tick_size REAL DEFAULT 1,
+		status JSONB DEFAULT '{"status": "inactive", "reason": ""}'::jsonb
+	);
+	`
+	_, err := r.db.GetPool().Exec(ctx, query)
+	return err
+}
+
+func (r *SymbolDBRepository) ListingSymbol(ctx context.Context, sym *Symbol) (*Symbol, error) {
+	// 심볼이 이미 존재하는지 확인
+	var exists bool
+	checkQuery := `SELECT EXISTS(SELECT 1 FROM symbols WHERE symbol = $1)`
+	err := r.db.GetPool().QueryRow(ctx, checkQuery, sym.Symbol).Scan(&exists)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		return nil, fmt.Errorf("symbol '%s' already exists", sym.Symbol)
+	}
+
+	// 새 심볼 삽입
+	statusJSON, err := json.Marshal(sym.Status)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		INSERT INTO symbols (symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id`
+
+	err = r.db.GetPool().QueryRow(ctx, query,
+		sym.Symbol, sym.Name, sym.Detail, sym.Url, sym.Logo,
+		sym.Market, sym.Type, sym.MinimumOrderQuantity, sym.TickSize, statusJSON).Scan(&sym.ID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return sym, nil
+}

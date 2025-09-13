@@ -37,5 +37,11 @@
     "saturday": { "open": null, "close": null },
     "sunday": { "open": null, "close": null }
   },
-  "holidays": []
+  "holidays": [{
+    "date" : "2024-01-01",
+    "name" : "New Year's Day",
+    "pre_market_sessions" : { "open" : null, "close" : null },
+    "regular_trading_sessions" : { "open" : null, "close" : null },
+    "post_market_sessions" : { "open" : null, "close" : null }
+  }]
 }
