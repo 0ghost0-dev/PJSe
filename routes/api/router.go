@@ -46,6 +46,7 @@ func registerV1Routes(router fiber.Router) {
 	routers := []RouteRegistrar{
 		&v1.AuthRouter{},
 		&v1.HealthRouter{},
+		&v1.ExchangeRouter{},
 		// 새로운 라우터가 추가되면 여기에 추가
 	}
 

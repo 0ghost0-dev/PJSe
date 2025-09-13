@@ -1,7 +1,7 @@
 # System files
 .idea
-.env
 secret.txt
+.env
 
 # Database files
 datas/*
