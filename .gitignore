@@ -5,3 +5,6 @@ secret.txt
 
 # Database files
 datas/*
+
+# legacy files
+legacy/
