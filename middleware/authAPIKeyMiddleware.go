@@ -23,7 +23,7 @@ func AuthAPIKeyMiddleware() fiber.Handler {
 
 		ctx := context.Background()
 		apiKey, _ := app.GetApp().APIKeyRepo().AuthenticateAPIKey(ctx, token) // 토큰 인증
-		if apiKey == nil {
+		if apiKey == nil || apiKey.Status != "active" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid API key",
 				"code":  fiber.StatusUnauthorized,

@@ -323,6 +323,11 @@ func (r *APIKeyDBRepository) AuthenticateAPIKey(ctx context.Context, apiKey stri
 		keyPrefix = apiKey[:10]
 	}
 
+	// 유효기한 지난 키 정리
+	if err := r.CleanupExpiredKeys(context.Background()); err != nil {
+		fmt.Printf("만료된 API 키 정리 실패: %v\n", err)
+	}
+
 	// 데이터베이스에서 해당 prefix를 가진 활성 키들 조회
 	query := `
 		SELECT id, user_id, key_hash, key_prefix, name, scopes, status, created_at, last_used, expires_at, updated_at
