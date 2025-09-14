@@ -31,8 +31,8 @@ func SetupRoutes(app *fiber.App) {
 		},
 	}), swagger.New(swagger.Config{
 		BasePath: "/api/v1/admin",
-		FilePath: "/docs/v1/swagger.yaml",
-		Path:     "/docs/v1",
+		FilePath: "./docs/v1/swagger.yaml",
+		Path:     "docs",
 	}))
 
 	// 각 버전 및 도메인의 라우터 등록
