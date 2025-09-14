@@ -42,12 +42,12 @@ func NewPostgresDBConfig() *PostgresDBConfig {
 	}
 
 	return &PostgresDBConfig{
-		Host:            utils.GetEnv("POSTGRES_DB_HOST", "localhost"),
-		Port:            utils.GetEnv("POSTGRES_DB_PORT", "5432"),
-		User:            utils.GetEnv("POSTGRES_DB_USER", "postgresql"),
-		Password:        utils.GetEnv("POSTGRES_DB_PASSWORD", "1234"),
-		DBName:          utils.GetEnv("POSTGRES_DB_NAME", "exchange_data"),
-		SSLMode:         utils.GetEnv("POSTGRES_DB_SSLMODE", "disable"),
+		Host:            utils.GetEnv("POSTGRESQL_DB_HOST", "localhost"),
+		Port:            utils.GetEnv("POSTGRESQL_DB_PORT", "5432"),
+		User:            utils.GetEnv("POSTGRESQL_DB_USER", "postgresql"),
+		Password:        utils.GetEnv("POSTGRESQL_DB_PASSWORD", "1234"),
+		DBName:          utils.GetEnv("POSTGRESQL_DB_NAME", "exchange_data"),
+		SSLMode:         utils.GetEnv("POSTGRESQL_DB_SSLMODE", "disable"),
 		MaxConns:        int32(maxConns),
 		MinConns:        int32(minConns),
 		MaxConnLifetime: time.Second * time.Duration(macConnsLifetime),
