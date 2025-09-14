@@ -8,3 +8,6 @@ datas/*
 
 # legacy files
 legacy/
+
+# Auto compiled files
+tmp/

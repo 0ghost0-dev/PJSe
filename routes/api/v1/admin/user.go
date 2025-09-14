@@ -4,6 +4,7 @@ import (
 	"PJS_Exchange/app"
 	"PJS_Exchange/databases/postgres"
 	"PJS_Exchange/middleware"
+	"PJS_Exchange/template"
 	"context"
 	"time"
 
@@ -40,14 +41,9 @@ func (ur *UserRouter) getUserList(c *fiber.Ctx) error {
 	ctx := context.Background()
 	userList, err := app.GetApp().UserRepo().GetUserIDs(ctx)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to get user list: " + err.Error(),
-			"code":  fiber.StatusInternalServerError,
-		})
+		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to get user list: "+err.Error())
 	}
-	return c.Status(200).JSON(fiber.Map{
-		"user_ids": userList,
-	})
+	return c.Status(200).JSON(userList)
 }
 
 // @Summary		특정 유저의 상세 정보 반환
@@ -66,24 +62,17 @@ func (ur *UserRouter) getUserDetail(c *fiber.Ctx) error {
 	ctx := context.Background()
 	id, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-			"code":  fiber.StatusBadRequest,
-		})
+		return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid user ID")
 	}
 	user, err := app.GetApp().UserRepo().GetUserByID(ctx, id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to get user detail: " + err.Error(),
-			"code":  fiber.StatusInternalServerError,
-		})
+		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to get user: "+err.Error())
 	}
 	if user == nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "User not found",
-			"code":  fiber.StatusNotFound,
-		})
+		return template.ErrorHandler(c, fiber.StatusNotFound, "User not found")
 	}
+	user.Password = "" // 비밀번호는 반환하지 않음
+
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
@@ -127,17 +116,11 @@ func (ur *UserRouter) activateUser(c *fiber.Ctx) error {
 	ctx := context.Background()
 	id, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Invalid user ID",
-			"code":  fiber.StatusNotFound,
-		})
+		return template.ErrorHandler(c, fiber.StatusNotFound, "Invalid user ID")
 	}
 	err = app.GetApp().UserRepo().EnableUser(ctx, id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to activate user: " + err.Error(),
-			"code":  fiber.StatusInternalServerError,
-		})
+		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to activate user: "+err.Error())
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User activated successfully",
@@ -159,17 +142,11 @@ func (ur *UserRouter) deactivateUser(c *fiber.Ctx) error {
 	ctx := context.Background()
 	id, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Invalid user ID",
-			"code":  fiber.StatusNotFound,
-		})
+		return template.ErrorHandler(c, fiber.StatusNotFound, "Invalid user ID")
 	}
 	err = app.GetApp().UserRepo().DisableUser(ctx, id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to deactivate user: " + err.Error(),
-			"code":  fiber.StatusInternalServerError,
-		})
+		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to deactivate user: "+err.Error())
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User deactivated successfully",

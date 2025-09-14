@@ -1,5 +1,40 @@
 basePath: /
 definitions:
+  postgres.Status:
+    properties:
+      reason:
+        description: 거래정지 혹은 상장폐지 사유
+        type: string
+      status:
+        description: '"active", "inactive", "init", "suspended", "delisted"'
+        type: string
+    type: object
+  postgres.Symbol:
+    properties:
+      detail:
+        type: string
+      id:
+        type: integer
+      logo:
+        type: string
+      market:
+        type: string
+      minimum_order_quantity:
+        type: number
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/postgres.Status'
+      symbol:
+        type: string
+      tick_size:
+        type: number
+      type:
+        description: '"stock", "index" 등'
+        type: string
+      url:
+        type: string
+    type: object
   postgres.User:
     properties:
       CreatedAt:
@@ -19,7 +54,7 @@ definitions:
       username:
         type: string
     type: object
-host: localhost:8080
+host: localhost:4000
 info:
   contact: {}
   description: 이것은 Project. Stock Exchange API 문서입니다.
@@ -29,6 +64,131 @@ info:
   title: Project. Stock Exchange API
   version: "1.0"
 paths:
+  /api/v1/admin/symbol:
+    get:
+      description: 상장된 모든 심볼의 리스트를 반환합니다.
+      parameters:
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 심볼 목록 반환
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/postgres.Symbol'
+              type: array
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 상장된 모든 심볼 조회
+      tags:
+      - Admin - Symbol
+    post:
+      consumes:
+      - application/json
+      description: 새로운 심볼을 상장합니다.
+      parameters:
+      - description: 상장할 심볼 정보
+        in: body
+        name: symbol
+        required: true
+        schema:
+          $ref: '#/definitions/postgres.Symbol'
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 성공 시 상장된 심볼 정보 반환
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/postgres.Symbol'
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 심볼 상장
+      tags:
+      - Admin - Symbol
+  /api/v1/admin/symbol/{symbol}:
+    get:
+      description: 특정 심볼의 정보를 반환합니다.
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 심볼 상세 정보 반환
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/postgres.Symbol'
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 심볼을 찾을 수 없을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 특정 심볼 정보 조회
+      tags:
+      - Admin - Symbol
   /api/v1/admin/user:
     get:
       description: 모든 유저의 [ID, 이름, 활성화 여부] 목록을 배열로 반환합니다.
@@ -267,24 +427,21 @@ paths:
     post:
       consumes:
       - application/json
-      description: 새로운 유저를 등록합니다. (현재 미구현)
+      description: 새로운 유저를 등록합니다. (Access Code 필요)
       parameters:
-      - description: '유저 등록 정보 (예: 이메일, 비밀번호)'
+      - description: 유저 등록 정보
         in: body
         name: user
         required: true
         schema:
-          additionalProperties:
-            type: string
           type: object
       produces:
       - application/json
       responses:
         "201":
-          description: 성공 시 등록된 유저 정보 반환
+          description: 성공 시 유저 정보 반환
           schema:
-            additionalProperties:
-              type: string
+            additionalProperties: true
             type: object
         "400":
           description: 잘못된 요청 시 에러 메시지 반환

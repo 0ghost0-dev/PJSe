@@ -2,6 +2,7 @@ package v1
 
 import (
 	"PJS_Exchange/exchanges"
+	"PJS_Exchange/template"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -32,10 +33,7 @@ func (hr *ExchangeRouter) RegisterRoutes(router fiber.Router) {
 func (hr *ExchangeRouter) getExchangeData(c *fiber.Ctx) error {
 	data, err := exchanges.Load()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to load exchange data: " + err.Error(),
-			"code":  fiber.StatusInternalServerError,
-		})
+		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to load exchange data: "+err.Error())
 	}
 	return c.Status(fiber.StatusOK).JSON(data)
 }

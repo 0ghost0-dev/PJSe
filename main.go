@@ -20,7 +20,7 @@ import (
 // @description	이것은 Project. Stock Exchange API 문서입니다.
 // @license.name	MIT
 // @license.url	https://github.com/0ghost0-dev/PJSe/blob/master/license
-// @host			localhost:8080
+// @host			localhost:4000
 // @BasePath		/
 func main() {
 	utils.InitEnv()
@@ -45,6 +45,7 @@ func main() {
 			}
 			return c.Status(code).JSON(fiber.Map{
 				"error": err.Error(),
+				"code":  code,
 			})
 		},
 	})

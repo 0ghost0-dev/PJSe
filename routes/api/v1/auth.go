@@ -4,6 +4,7 @@ import (
 	"PJS_Exchange/app"
 	"PJS_Exchange/databases/postgres"
 	"PJS_Exchange/middleware"
+	"PJS_Exchange/template"
 	"PJS_Exchange/utils"
 	"context"
 	"fmt"
@@ -24,10 +25,9 @@ func (ar *AuthRouter) RegisterRoutes(router fiber.Router) {
 		Max:        5, // 최대 요청 수
 		Expiration: 15 * time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Too many requests",
-				"code":  fiber.StatusTooManyRequests,
-			})
+			return template.ErrorHandler(c,
+				fiber.StatusTooManyRequests,
+				"Too many requests. Please try again later.")
 		},
 	}))
 
@@ -60,14 +60,14 @@ func (ar *AuthRouter) authTest(c *fiber.Ctx) error {
 }
 
 // @Summary		유저 등록
-// @Description	새로운 유저를 등록합니다. (현재 미구현)
+// @Description	새로운 유저를 등록합니다. (Access Code 필요)
 // @Tags			Auth
 // @Accept		json
 // @Produce		json
-// @Param			user	body		map[string]string	true	"유저 등록 정보 (예: 이메일, 비밀번호)"
-// @Success		201		{object}	map[string]string	"성공 시 등록된 유저 정보 반환"
+// @Param			user	body		object		true	"유저 등록 정보"
+// @Success		201		{object}	map[string]interface{}	"성공 시 유저 정보 반환"
 // @Failure		400		{object}	map[string]string	"잘못된 요청 시 에러 메시지 반환"
-// @Failure		500		{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Failure		500     {object}	map[string]string	"서버 오류 시 에러 메시지 반환"
 // @Router			/api/v1/auth/ [post]
 func (ar *AuthRouter) registerUser(c *fiber.Ctx) error {
 	var req struct {
@@ -77,34 +77,23 @@ func (ar *AuthRouter) registerUser(c *fiber.Ctx) error {
 		AccessCode string `json:"accessCode"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid JSON body",
-		})
+		return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
 	ctx := context.Background()
 	pw, err := utils.HashPassword(req.Password)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to hash password",
-			"code":  fiber.StatusInternalServerError,
-		})
+		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to hash password")
 	}
 	user, err := app.GetApp().UserRepo().CreateUser(ctx, req.Username, req.Email, pw, req.AccessCode)
 	if err != nil {
 		// 만약 err 내용에 "failed to validate accept code"가 포함되어 있으면 400 반환
 		if strings.Contains(err.Error(), "failed to validate accept code") || strings.Contains(err.Error(), "invalid or used accept code") {
 			//fmt.Println("Invalid or used access code:", err)
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Invalid or used access code",
-				"code":  fiber.StatusBadRequest,
-			})
+			return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid or used access code")
 		} else {
 			fmt.Println("Error creating user:", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Failed to create user",
-				"code":  fiber.StatusInternalServerError,
-			})
+			return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to create user")
 		}
 	}
 	fmt.Println("User created:", user.Username)
@@ -141,9 +130,8 @@ func (ar *AuthRouter) generateTempAPIKey(c *fiber.Ctx) error {
 		newAPIKey, apiKeyData, err = app.GetApp().APIKeyRepo().CreateAPIKey(ctx, strconv.Itoa(user.ID), "Temporary Auth API Key", postgres.APIKeyScope{APIKeyRead: true, APIKeyWrite: true}, &timeA)
 	}
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to generate API key",
-		})
+		fmt.Println("Error creating API key:", err)
+		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to create API key")
 	}
 	return c.Status(200).JSON(fiber.Map{
 		"apiKey": newAPIKey,

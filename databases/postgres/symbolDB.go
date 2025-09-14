@@ -10,12 +10,13 @@ import (
 const (
 	StatusActive    = "active"
 	StatusInactive  = "inactive"
+	StatusInit      = "init"
 	StatusSuspended = "suspended"
 	StatusDelisted  = "delisted"
 )
 
 type Status struct {
-	Status string `json:"status"` // "active", "inactive", "suspended", "delisted"
+	Status string `json:"status"` // "active", "inactive", "init", "suspended", "delisted"
 	Reason string `json:"reason"` // 거래정지 혹은 상장폐지 사유
 }
 
@@ -153,4 +154,27 @@ func (r *SymbolDBRepository) GetSymbolData(ctx context.Context, symbol string) (
 	}
 
 	return sym, nil
+}
+
+func (r *SymbolDBRepository) UpdateSymbolStatus(ctx context.Context, symbol string, status Status) error {
+	statusJSON, err := json.Marshal(status)
+	if err != nil {
+		return err
+	}
+
+	query := `UPDATE symbols SET status = $1 WHERE symbol = $2`
+	_, err = r.db.GetPool().Exec(ctx, query, statusJSON, symbol)
+	return err
+}
+
+func (r *SymbolDBRepository) SetTickSize(ctx context.Context, symbol string, tickSize float32) error {
+	query := `UPDATE symbols SET tick_size = $1 WHERE symbol = $2`
+	_, err := r.db.GetPool().Exec(ctx, query, tickSize, symbol)
+	return err
+}
+
+func (r *SymbolDBRepository) SetMinimumOrderQuantity(ctx context.Context, symbol string, minQty float32) error {
+	query := `UPDATE symbols SET minimum_order_quantity = $1 WHERE symbol = $2`
+	_, err := r.db.GetPool().Exec(ctx, query, minQty, symbol)
+	return err
 }

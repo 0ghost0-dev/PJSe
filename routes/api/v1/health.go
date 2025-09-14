@@ -4,6 +4,7 @@ import (
 	"PJS_Exchange/app"
 	"PJS_Exchange/databases/postgres"
 	"PJS_Exchange/middleware"
+	"PJS_Exchange/template"
 	"context"
 	"time"
 
@@ -80,9 +81,6 @@ func (hr *HealthRouter) healthPost(c *fiber.Ctx) error {
 			"time":      time.Now().Format(time.RFC3339),
 		})
 	} else {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid or Expired API key",
-			"code":  fiber.StatusUnauthorized,
-		})
+		return template.ErrorHandler(c, fiber.StatusUnauthorized, "Invalid or Expired API Key")
 	}
 }
