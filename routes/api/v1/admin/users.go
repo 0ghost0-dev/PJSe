@@ -1,9 +1,9 @@
 package admin
 
 import (
-	"PJS_Exchange/app"
-	"PJS_Exchange/databases/postgres"
+	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/middleware"
+	"PJS_Exchange/singletons/postgresApp"
 	"PJS_Exchange/template"
 	"context"
 	"time"
@@ -14,7 +14,9 @@ import (
 type UserRouter struct{}
 
 func (ur *UserRouter) RegisterRoutes(router fiber.Router) {
-	adminUserGroup := router.Group("/user", middleware.AuthAPIKeyMiddlewareRequireScopes(postgres.APIKeyScope{
+	adminUserGroup := router.Group("/users", middleware.AuthAPIKeyMiddlewareRequireScopes(middleware.AuthConfig{
+		Bypass: false,
+	}, postgresql.APIKeyScope{
 		AdminUserManage: true,
 	}))
 
@@ -34,12 +36,12 @@ func (ur *UserRouter) RegisterRoutes(router fiber.Router) {
 // @Produce		json
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminUserManage	Scope
 // @Success		200				{object}	map[string][]int	"성공 시 유저 목록 반환"
-// @Failure		500				{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/user [get]
 func (ur *UserRouter) getUserList(c *fiber.Ctx) error {
 	ctx := context.Background()
-	userList, err := app.GetApp().UserRepo().GetUserIDs(ctx)
+	userList, err := postgresApp.Get().UserRepo().GetUserIDs(ctx)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to get user list: "+err.Error())
 	}
@@ -52,10 +54,10 @@ func (ur *UserRouter) getUserList(c *fiber.Ctx) error {
 // @Produce		json
 // @Param			id				path		int					true	"유저 ID"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminUserManage	Scope
-// @Success		200				{object}	postgres.User		"성공 시 유저 상세 정보 반환"
+// @Success		200				{object}	postgresql.User		"성공 시 유저 상세 정보 반환"
 // @Failure		400				{object}	map[string]string	"잘못된 요청 시 에러 메시지 반환"
 // @Failure		404				{object}	map[string]string	"유저를 찾을 수 없을 때 에러 메시지 반환"
-// @Failure		500				{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/user/{id} [get]
 func (ur *UserRouter) getUserDetail(c *fiber.Ctx) error {
@@ -64,7 +66,7 @@ func (ur *UserRouter) getUserDetail(c *fiber.Ctx) error {
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid user ID")
 	}
-	user, err := app.GetApp().UserRepo().GetUserByID(ctx, id)
+	user, err := postgresApp.Get().UserRepo().GetUserByID(ctx, id)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to get user: "+err.Error())
 	}
@@ -82,13 +84,13 @@ func (ur *UserRouter) getUserDetail(c *fiber.Ctx) error {
 // @Produce		json
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminUserManage	Scope
 // @Success		201				{object}	map[string]string	"성공 시 액세스 코드 반환"
-// @Failure		500				{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/user [post]
 func (ur *UserRouter) generateAccessCode(c *fiber.Ctx) error {
 	ctx := context.Background()
 	TimeA := time.Now().Add(24 * time.Hour)
-	accessCode, data, err := app.GetApp().AcceptCodeRepo().GenerateAcceptCode(ctx, &TimeA)
+	accessCode, data, err := postgresApp.Get().AcceptCodeRepo().GenerateAcceptCode(ctx, &TimeA)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to generate access code: " + err.Error(),
@@ -109,7 +111,7 @@ func (ur *UserRouter) generateAccessCode(c *fiber.Ctx) error {
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminUserManage	Scope
 // @Success		200				{object}	map[string]string	"성공 시 성공 메시지 반환"
 // @Failure		404				{object}	map[string]string	"유저를 찾을 수 없을 때 에러 메시지 반환"
-// @Failure		500				{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/user/{id}/activate [patch]
 func (ur *UserRouter) activateUser(c *fiber.Ctx) error {
@@ -118,7 +120,7 @@ func (ur *UserRouter) activateUser(c *fiber.Ctx) error {
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusNotFound, "Invalid user ID")
 	}
-	err = app.GetApp().UserRepo().EnableUser(ctx, id)
+	err = postgresApp.Get().UserRepo().EnableUser(ctx, id)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to activate user: "+err.Error())
 	}
@@ -135,7 +137,7 @@ func (ur *UserRouter) activateUser(c *fiber.Ctx) error {
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminUserManage	Scope
 // @Success		200				{object}	map[string]string	"성공 시 성공 메시지 반환"
 // @Failure		404				{object}	map[string]string	"유저를 찾을 수 없을 때 에러 메시지 반환"
-// @Failure		500				{object}	map[string]string	"서버 오류 시 에러 메시지 반환"
+// @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/user/{id}/deactivate [patch]
 func (ur *UserRouter) deactivateUser(c *fiber.Ctx) error {
@@ -144,7 +146,7 @@ func (ur *UserRouter) deactivateUser(c *fiber.Ctx) error {
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusNotFound, "Invalid user ID")
 	}
-	err = app.GetApp().UserRepo().DisableUser(ctx, id)
+	err = postgresApp.Get().UserRepo().DisableUser(ctx, id)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to deactivate user: "+err.Error())
 	}

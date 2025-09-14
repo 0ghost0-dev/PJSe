@@ -1,4 +1,4 @@
-package postgres
+package postgresql
 
 import (
 	"PJS_Exchange/databases"
@@ -32,6 +32,7 @@ const (
 	ScopeOrderCreate = "order:create" // 주문 생성
 	ScopeOrderCancel = "order:cancel" // 주문 취소
 	ScopeOrderModify = "order:modify" // 주문 수정
+	ScopeOrderNotify = "order:notify" // 주문 알림
 
 	// 관리자 기능
 	ScopeAdminAPIManage    = "admin:api_manage"    // API 키 관리
@@ -39,10 +40,6 @@ const (
 	ScopeAdminSymbolManage = "admin:symbol_manage" // 티커 관리
 	ScopeAdminSystemRead   = "admin:system_read"   // 시스템 정보 조회
 	ScopeAdminSystemWrite  = "admin:system_write"  // 시스템 설정 변경
-
-	// 웹훅/알림 관련
-	ScopeWebhookRead  = "webhook:read"  // 웹훅 조회
-	ScopeWebhookWrite = "webhook:write" // 웹훅 설정
 
 	// API 키 관리
 	ScopeAPIKeyRead  = "api_key:read"  // API 키 조회
@@ -63,6 +60,7 @@ type APIKeyScope struct {
 	OrderCreate bool `json:"order_create"`
 	OrderCancel bool `json:"order_cancel"`
 	OrderModify bool `json:"order_modify"`
+	OrderNotify bool `json:"order_notify"`
 
 	// 관리자
 	AdminAPIKeyManage bool `json:"admin_api_key_manage"`
@@ -71,27 +69,26 @@ type APIKeyScope struct {
 	AdminSystemRead   bool `json:"admin_system_read"`
 	AdminSystemWrite  bool `json:"admin_system_write"`
 
-	// 웹훅
-	WebhookRead  bool `json:"webhook_read"`
-	WebhookWrite bool `json:"webhook_write"`
-
 	// API 키 관리
 	APIKeyRead  bool `json:"api_key_read"`
 	APIKeyWrite bool `json:"api_key_write"`
 }
 
 type APIKey struct {
-	ID        string      `json:"id"`
-	UserID    string      `json:"user_id"`
-	KeyHash   string      `json:"-"` // JSON에서 제외
-	KeyPrefix string      `json:"key_prefix"`
-	Name      string      `json:"name"`
-	Scopes    APIKeyScope `json:"scopes"`
-	Status    string      `json:"status"`
-	CreatedAt time.Time   `json:"created_at"`
-	LastUsed  *time.Time  `json:"last_used"`
-	ExpiresAt *time.Time  `json:"expires_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID                string      `json:"id"`
+	UserID            string      `json:"user_id"`
+	KeyHash           string      `json:"-"` // JSON에서 제외
+	KeyPrefix         string      `json:"key_prefix"`
+	Name              string      `json:"name"`
+	Scopes            APIKeyScope `json:"scopes"`
+	AllowedIPs        []string    `json:"allowed_ips,omitempty"`
+	AllowedCuntries   []string    `json:"allowed_countries,omitempty"`
+	AllowedUserAgents []string    `json:"allowed_user_agents,omitempty"`
+	Status            string      `json:"status"`
+	CreatedAt         time.Time   `json:"created_at"`
+	LastUsed          *time.Time  `json:"last_used"`
+	ExpiresAt         *time.Time  `json:"expires_at"`
+	UpdatedAt         time.Time   `json:"updated_at"`
 }
 
 type APIKeyRepository interface {
@@ -129,6 +126,9 @@ func (r *APIKeyDBRepository) CreateAPIKeysTable(ctx context.Context) error {
 		key_prefix VARCHAR(20) NOT NULL,
 		name VARCHAR(100) NOT NULL,
 		scopes JSONB DEFAULT '{}',
+	    allowed_ips JSONB DEFAULT '["*"]',
+	    allowed_countries JSONB DEFAULT '["*"]',
+	    allowed_user_agents JSONB DEFAULT '["*"]',
 		status VARCHAR(20) DEFAULT 'active',
 		created_at TIMESTAMPTZ DEFAULT NOW(),
 		last_used TIMESTAMPTZ,
@@ -484,13 +484,12 @@ func APIScopeToMap(scopes APIKeyScope) map[string]bool {
 		ScopeOrderCreate:       scopes.OrderCreate,
 		ScopeOrderCancel:       scopes.OrderCancel,
 		ScopeOrderModify:       scopes.OrderModify,
+		ScopeOrderNotify:       scopes.OrderNotify,
 		ScopeAdminAPIManage:    scopes.AdminAPIKeyManage,
 		ScopeAdminUserManage:   scopes.AdminUserManage,
 		ScopeAdminSymbolManage: scopes.AdminSymbolManage,
 		ScopeAdminSystemRead:   scopes.AdminSystemRead,
 		ScopeAdminSystemWrite:  scopes.AdminSystemWrite,
-		ScopeWebhookRead:       scopes.WebhookRead,
-		ScopeWebhookWrite:      scopes.WebhookWrite,
 		ScopeAPIKeyRead:        scopes.APIKeyRead,
 		ScopeAPIKeyWrite:       scopes.APIKeyWrite,
 	}
@@ -535,6 +534,8 @@ func (r *APIKeyDBRepository) HasScope(key *APIKey, scope string) bool {
 		return key.Scopes.OrderCancel
 	case ScopeOrderModify:
 		return key.Scopes.OrderModify
+	case ScopeOrderNotify:
+		return key.Scopes.OrderNotify
 	case ScopeAdminAPIManage:
 		return key.Scopes.AdminAPIKeyManage
 	case ScopeAdminUserManage:
@@ -545,10 +546,6 @@ func (r *APIKeyDBRepository) HasScope(key *APIKey, scope string) bool {
 		return key.Scopes.AdminSystemRead
 	case ScopeAdminSystemWrite:
 		return key.Scopes.AdminSystemWrite
-	case ScopeWebhookRead:
-		return key.Scopes.WebhookRead
-	case ScopeWebhookWrite:
-		return key.Scopes.WebhookWrite
 	case ScopeAPIKeyRead:
 		return key.Scopes.APIKeyRead
 	case ScopeAPIKeyWrite:

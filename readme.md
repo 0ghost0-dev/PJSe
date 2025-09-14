@@ -16,22 +16,54 @@
 - [x] 관리자 기능 (유저(브로커) 관리, 심볼 관리 등)
 ---
 ## .env 파일 설정
+<details>
+<summary>펼쳐보기</summary>
+
 ```
-SALT=
 # Swagger API 문서 접근용 계정
 SWAGGER_USER=
 SWAGGER_PASSWORD=
-# ACID 중요 데이터 보관용 PostgreSQL DB 설정
+# PostgreSQL DB 설정
 POSTGRES_DB_HOST=localhost
 POSTGRES_DB_PORT=5432
 POSTGRES_DB_USER=postgres
-POSTGRES_DB_PASSWORD=1234
-POSTGRES_DB_NAME=exchange_data
+POSTGRES_DB_PASSWORD=pjse-user-1234
+POSTGRES_DB_NAME=exchange-data
 POSTGRES_DB_SSLMODE=disable
+POSTGRES_DB_MAX_CONNS=30
+POSTGRES_DB_MIN_CONNS=10
+POSTGRES_DB_CONN_MAX_LIFETIME=3600
+POSTGRES_DB_CONN_MAX_IDLE_TIME=1800
+# Redis 설정
+REDIS_HOST=localhost:6379
+REDIS_USERNAME=pjse
+REDIS_PASSWORD=pjse-user-1234
+REDIS_DB=0
+REDIS_POOL_SIZE=20
+REDIS_MIN_IDLE_CONNS=10
+REDIS_MAX_RETRIES=3
+REDIS_DIAL_TIMEOUT=5
+REDIS_READ_TIMEOUT=3
+REDIS_WRITE_TIMEOUT=3
+REDIS_POOL_TIMEOUT=4
+# 웹소켓 설정
+WEBSOCKET_PORT=4001
+# 서버 설정
+SERVER_PORT=4000
+SYS_LOG=true
+SYS_LOG_LOCATION=./logs
+SYS_LOG_RESET_DAYS=7
+SYS_LOG_LEVEL=info
 ```
+
+</details>
+
 ---
 ## 기술 스택
 - Go (Golang)
 - Fiber (웹 프레임워크)
+- WebSocket (실시간 통신)
+- Protobuf (데이터 직렬화)
 - PostgreSQL (데이터베이스)
-- Redis (인메모리 데이터 저장소)
+- TimeScaleDB (시계열 데이터베이스)
+- Redis (인메모리 데이터베이스)

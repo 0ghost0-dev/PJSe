@@ -1,4 +1,4 @@
-package postgres
+package postgresql
 
 import (
 	"PJS_Exchange/databases"
@@ -9,9 +9,15 @@ import (
 )
 
 type AcceptCodeValidator interface {
-	ValidateAcceptCode(ctx context.Context, code string) (bool, error)
+	ValidateAcceptCode(ctx context.Context, code string) (bool, bool, error)
 	RelationShipUser(ctx context.Context, code string, userID int) error
 }
+
+const (
+	AccTypeNormal  = 0
+	AccTypePremium = 1
+	AccTypeAdmin   = 2
+)
 
 type User struct {
 	ID        int       `json:"id"`
@@ -19,7 +25,8 @@ type User struct {
 	Email     string    `json:"Email"`
 	Password  string    `json:"Password"` // Must be hashed
 	CreatedAt time.Time `json:"CreatedAt"`
-	AccType   string    `json:"accType"` // "admin" or "standard"
+	Admin     bool      `json:"admin"`
+	Type      int       `json:"type"`
 	Enabled   bool      `json:"enabled"`
 	//APIKey    uuid.UUID `json:"api_key"`
 }
@@ -51,7 +58,8 @@ func (r *UserDBRepository) CreateUsersTable(ctx context.Context) error {
 	    email VARCHAR(255) UNIQUE NOT NULL,
 	    password VARCHAR(255) NOT NULL,
 	    created_at TIMESTAMPTZ NOT NULL,
-    	accType VARCHAR(50) NOT NULL DEFAULT 'standard',
+    	admin BOOLEAN NOT NULL DEFAULT FALSE,
+    	type INT NOT NULL DEFAULT 0,
 	    enabled BOOLEAN NOT NULL DEFAULT FALSE
 -- 	    api_key UUID
 	);`
@@ -92,7 +100,7 @@ func (r *UserDBRepository) CreateUser(ctx context.Context, username string, emai
 	}
 
 	// acceptCodeDB에 있는 acceptCode가 유효한지 확인
-	accept, err := r.acceptRepo.ValidateAcceptCode(ctx, acceptCode)
+	accept, admin, err := r.acceptRepo.ValidateAcceptCode(ctx, acceptCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate accept code: %w", err)
 	}
@@ -103,17 +111,24 @@ func (r *UserDBRepository) CreateUser(ctx context.Context, username string, emai
 			Username: username,
 			Email:    email,
 			Password: password, // 호출자가 이미 해싱했다고 가정
-			Enabled:  false,
+			Admin:    admin,
+			Type: func() int {
+				if admin {
+					return AccTypeAdmin
+				}
+				return AccTypeNormal
+			}(),
+			Enabled: false,
 		}
 
 		insertQuery := `
-		INSERT INTO users (username, email, password, created_at, enabled) 
-		VALUES ($1, $2, $3, NOW(), $4) 
-		RETURNING id, username, email, password, created_at, enabled`
+		INSERT INTO users (username, email, password, created_at, enabled, admin, type) 
+		VALUES ($1, $2, $3, NOW(), $4 ,$5, $6)
+		RETURNING id, username, email, password, created_at, enabled, admin, type;`
 
 		err := r.db.GetPool().QueryRow(ctx, insertQuery,
-			user.Username, user.Email, user.Password, user.Enabled).
-			Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.Enabled)
+			user.Username, user.Email, user.Password, user.Enabled, user.Admin, user.Type).
+			Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.Enabled, &user.Admin, &user.Type)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to create user: %w", err)
@@ -132,8 +147,8 @@ func (r *UserDBRepository) CreateUser(ctx context.Context, username string, emai
 
 func (r *UserDBRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	user := &User{}
-	err := r.db.GetPool().QueryRow(ctx, "SELECT id, username, email, password, created_at, enabled, accType FROM users WHERE email=$1", email).
-		Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.Enabled, &user.AccType)
+	err := r.db.GetPool().QueryRow(ctx, "SELECT id, username, email, password, created_at, enabled, admin, type FROM users WHERE email=$1", email).
+		Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.Enabled, &user.Admin, &user.Type)
 	if err != nil {
 		fmt.Println("Failed to get user by email:", err)
 		return nil, err
@@ -143,8 +158,8 @@ func (r *UserDBRepository) GetUserByEmail(ctx context.Context, email string) (*U
 
 func (r *UserDBRepository) GetUserByID(ctx context.Context, userID int) (*User, error) {
 	user := &User{}
-	err := r.db.GetPool().QueryRow(ctx, "SELECT id, username, email, password, created_at, enabled, accType FROM users WHERE id=$1", userID).
-		Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.Enabled, &user.AccType)
+	err := r.db.GetPool().QueryRow(ctx, "SELECT id, username, email, password, created_at, enabled, admin, type FROM users WHERE id=$1", userID).
+		Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.Enabled, &user.Admin, &user.Type)
 	if err != nil {
 		fmt.Println("Failed to get user by ID:", err)
 		return nil, err
@@ -171,6 +186,73 @@ func (r *UserDBRepository) GetUserIDs(ctx context.Context) (map[int][]string, er
 		userMap[id] = []string{username, fmt.Sprintf("%v", enabled)}
 	}
 	return userMap, nil
+}
+
+func (r *UserDBRepository) SetUsername(ctx context.Context, userID int, newUsername string) error {
+	_, err := r.db.GetPool().Exec(ctx, "UPDATE users SET username=$1 WHERE id=$2", newUsername, userID)
+	if err != nil {
+		fmt.Println("Failed to set username:", err)
+		return err
+	}
+	return nil
+}
+
+func (r *UserDBRepository) SetEmail(ctx context.Context, userID int, newEmail string) error {
+	// 이메일 형식 검증
+	if err := r.validateEmail(newEmail); err != nil {
+		return err
+	}
+
+	// 중복 확인 쿼리 최적화 (인덱스 활용)
+	var exists bool
+	checkQuery := "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1 AND id <> $2)"
+	if err := r.db.GetPool().QueryRow(ctx, checkQuery, newEmail, userID).Scan(&exists); err != nil {
+		return fmt.Errorf("failed to check existing email: %w", err)
+	}
+
+	if exists {
+		return fmt.Errorf("email already in use by another user")
+	}
+
+	_, err := r.db.GetPool().Exec(ctx, "UPDATE users SET email=$1 WHERE id=$2", newEmail, userID)
+	if err != nil {
+		fmt.Println("Failed to set email:", err)
+		return err
+	}
+	return nil
+}
+
+// SetUserPassword *비밀번호 해싱은 여기서 하지 않음, 반드시 해싱된 비밀번호를 전달해야 함*
+func (r *UserDBRepository) SetUserPassword(ctx context.Context, userID int, newHashedPassword string) error {
+	_, err := r.db.GetPool().Exec(ctx, "UPDATE users SET password=$1 WHERE id=$2", newHashedPassword, userID)
+	if err != nil {
+		fmt.Println("Failed to set user password:", err)
+		return err
+	}
+	return nil
+}
+
+func (r *UserDBRepository) SetUserAdminStatus(ctx context.Context, userID int, isAdmin bool) error {
+	_, err := r.db.GetPool().Exec(ctx, "UPDATE users SET admin=$1, type=$3 WHERE id=$2", isAdmin, userID, func() int {
+		if isAdmin {
+			return AccTypeAdmin
+		}
+		return AccTypeNormal
+	})
+	if err != nil {
+		fmt.Println("Failed to set user admin status:", err)
+		return err
+	}
+	return nil
+}
+
+func (r *UserDBRepository) SetUserType(ctx context.Context, userID int, userType int) error {
+	_, err := r.db.GetPool().Exec(ctx, "UPDATE users SET type=$1 WHERE id=$2 AND admin=false", userType, userID)
+	if err != nil {
+		fmt.Println("Failed to set user type:", err)
+		return err
+	}
+	return nil
 }
 
 func (r *UserDBRepository) IsUserEnabled(ctx context.Context, userID int) (bool, error) {

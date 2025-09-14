@@ -1,21 +1,22 @@
 package middleware
 
 import (
-	"PJS_Exchange/app"
+	"PJS_Exchange/databases/postgresql"
+	"PJS_Exchange/singletons/postgresApp"
 	"PJS_Exchange/utils"
-	"context"
 	"encoding/base64"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func AuthMiddleware() fiber.Handler {
+type AuthConfig struct {
+	Bypass bool // 활성화되지 않은 계정도 통과시키는 옵션
+}
+
+func AuthMiddleware(config AuthConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// authorization basic 헤더에서 아이디, 비밀번호 추출
-		// 아이디, 비밀번호로 유저(브로커) 인증
-		// 인증 성공 시, 새로운 API 키 생성 및 DB에 저장
-		// 인증 실패 시, 401 Unauthorized 반환
 		auth := c.Get("Authorization")
 
 		if auth == "" {
@@ -25,12 +26,14 @@ func AuthMiddleware() fiber.Handler {
 			})
 		}
 
-		if !strings.HasPrefix(auth, "Basic ") {
-			return c.Status(401).JSON(fiber.Map{
+		const basicPrefix = "Basic "
+		if len(auth) < len(basicPrefix) || auth[:len(basicPrefix)] != basicPrefix {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid authorization format",
+				"code":  fiber.StatusUnauthorized,
 			})
 		}
-		encoded := auth[6:] // "Basic "
+		encoded := auth[len(basicPrefix):]
 
 		decodedBytes, err := base64.StdEncoding.DecodeString(encoded)
 		if err != nil {
@@ -53,34 +56,139 @@ func AuthMiddleware() fiber.Handler {
 		password := parts[1]
 
 		// 인증 로직
-		ctx := context.Background()
-		user, err := app.GetApp().UserRepo().GetUserByEmail(ctx, username)
-		if err == nil && user != nil {
-			// 활성화된 계정인지 확인
-			if user.Enabled {
-				// 비밀번호 확인
-				if utils.CheckPasswordHash(password, user.Password) {
-					// 인증 성공, 다음 미들웨어 또는 핸들러로 진행
-					c.Locals("user", user)
-
-					return c.Next()
-				} else {
-					return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-						"error": "Invalid credentials",
-						"code":  fiber.StatusUnauthorized,
-					})
-				}
-			} else {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-					"error": "User account is not enabled",
-					"code":  fiber.StatusUnauthorized,
-				})
-			}
+		ctx := c.Context()
+		user, err := postgresApp.Get().UserRepo().GetUserByEmail(ctx, username)
+		if err != nil || user == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid credentials",
+				"code":  fiber.StatusUnauthorized,
+			})
 		}
 
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid credentials",
-			"code":  fiber.StatusUnauthorized,
-		})
+		// 활성화된 계정인지 확인
+		if !user.Enabled && !config.Bypass {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is not enabled",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+
+		// 비밀번호 확인
+		if !utils.CheckPasswordHash(password, user.Password) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid credentials",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+
+		// 인증 성공, 다음 미들웨어 또는 핸들러로 진행
+		c.Locals("user", user)
+		return c.Next()
+	}
+}
+
+func AuthAPIKeyMiddleware(config AuthConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Bearer 토큰 인증
+		auth := c.Get("Authorization")
+		if auth == "" || len(auth) < 7 || auth[:7] != "Bearer " {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Missing Authorization header",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+		token := auth[7:] // "Bearer "
+
+		ctx := c.Context()
+		apiKey, err := postgresApp.Get().APIKeyRepo().AuthenticateAPIKey(ctx, token)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "API key authentication failed",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+
+		if apiKey == nil || apiKey.Status != "active" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid API key",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+
+		// 활성화된 계정 인지 확인
+		id, err := strconv.Atoi(apiKey.UserID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Invalid user ID format",
+				"code":  fiber.StatusInternalServerError,
+			})
+		}
+
+		user, err := postgresApp.Get().UserRepo().GetUserByID(ctx, id)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to retrieve user",
+				"code":  fiber.StatusInternalServerError,
+			})
+		}
+
+		if user == nil || (!user.Enabled && !config.Bypass) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is not enabled",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+
+		// 인증 성공, 다음 미들웨어 또는 핸들러로 진행
+		c.Locals("apiKey", apiKey)
+		c.Locals("user", user)
+
+		return c.Next()
+	}
+}
+
+func AuthAPIKeyMiddlewareRequireScopes(config AuthConfig, requireScopes postgresql.APIKeyScope) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Bearer 토큰 인증
+		auth := c.Get("Authorization")
+		if auth == "" || len(auth) < 7 || auth[:7] != "Bearer " {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Missing Authorization header",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+		token := auth[7:] // "Bearer "
+
+		ctx := c.Context()
+		apiKey, err := postgresApp.Get().APIKeyRepo().AuthenticateAPIKey(ctx, token)
+		if err != nil || apiKey == nil || !postgresql.IsinScope(apiKey.Scopes, requireScopes) || apiKey.Status != "active" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid API key or insufficient scope",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+
+		// 활성화된 계정 인지 확인
+		id, err := strconv.Atoi(apiKey.UserID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Invalid user ID format",
+				"code":  fiber.StatusInternalServerError,
+			})
+		}
+
+		user, err := postgresApp.Get().UserRepo().GetUserByID(ctx, id)
+		if err != nil || user == nil || (!user.Enabled && !config.Bypass) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is not enabled",
+				"code":  fiber.StatusUnauthorized,
+			})
+		}
+
+		// 인증 성공, 다음 미들웨어 또는 핸들러로 진행
+		c.Locals("apiKey", apiKey)
+		c.Locals("user", user)
+
+		return c.Next()
 	}
 }

@@ -1,4 +1,4 @@
-package postgres
+package postgresql
 
 import (
 	"PJS_Exchange/databases"
@@ -31,6 +31,7 @@ type Symbol struct {
 	Type                 string  `json:"type"` // "stock", "index" 등
 	MinimumOrderQuantity float32 `json:"minimum_order_quantity"`
 	TickSize             float32 `json:"tick_size"`
+	TotalStocks          int64   `json:"total_stocks"`
 	Status               Status  `json:"status"`
 }
 
@@ -58,6 +59,7 @@ func (r *SymbolDBRepository) CreateSymbolsTable(ctx context.Context) error {
 		type VARCHAR(50) DEFAULT 'stock',
 		minimum_order_quantity REAL DEFAULT 1,
 		tick_size REAL DEFAULT 1,
+		total_stocks BIGINT DEFAULT 0,
 		status JSONB DEFAULT '{"status": "inactive", "reason": ""}'::jsonb
 	);
 	`
@@ -85,13 +87,13 @@ func (r *SymbolDBRepository) SymbolListing(ctx context.Context, sym *Symbol) (*S
 	}
 
 	query := `
-		INSERT INTO symbols (symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO symbols (symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id`
 
 	err = r.db.GetPool().QueryRow(ctx, query,
 		sym.Symbol, sym.Name, sym.Detail, sym.Url, sym.Logo,
-		sym.Market, sym.Type, sym.MinimumOrderQuantity, sym.TickSize, statusJSON).Scan(&sym.ID)
+		sym.Market, sym.Type, sym.MinimumOrderQuantity, sym.TickSize, sym.TotalStocks, statusJSON).Scan(&sym.ID)
 
 	if err != nil {
 		return nil, err
@@ -101,7 +103,7 @@ func (r *SymbolDBRepository) SymbolListing(ctx context.Context, sym *Symbol) (*S
 }
 
 func (r *SymbolDBRepository) GetSymbols(ctx context.Context) (*[]Symbol, error) {
-	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, status FROM symbols`
+	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, status FROM symbols`
 	rows, err := r.db.GetPool().Query(ctx, query)
 	if err != nil {
 		return nil, err
@@ -115,7 +117,7 @@ func (r *SymbolDBRepository) GetSymbols(ctx context.Context) (*[]Symbol, error) 
 		var statusJSON []byte
 
 		err := rows.Scan(&sym.ID, &sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
-			&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &statusJSON)
+			&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &statusJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -136,13 +138,13 @@ func (r *SymbolDBRepository) GetSymbols(ctx context.Context) (*[]Symbol, error) 
 }
 
 func (r *SymbolDBRepository) GetSymbolData(ctx context.Context, symbol string) (*Symbol, error) {
-	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, status FROM symbols WHERE symbol = $1`
+	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, status FROM symbols WHERE symbol = $1`
 	sym := &Symbol{}
 	var statusJSON []byte
 
 	err := r.db.GetPool().QueryRow(ctx, query, symbol).Scan(
 		&sym.ID, &sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
-		&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &statusJSON)
+		&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, sym.TotalStocks, &statusJSON)
 
 	if err != nil {
 		return nil, err

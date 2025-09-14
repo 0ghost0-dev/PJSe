@@ -1,6 +1,5 @@
 # System files
 .idea
-secret.txt
 .env
 
 # Database files

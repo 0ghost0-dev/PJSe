@@ -29,6 +29,8 @@ definitions:
         type: string
       tick_size:
         type: number
+      total_stocks:
+        type: integer
       type:
         description: '"stock", "index" 등'
         type: string
@@ -44,9 +46,8 @@ definitions:
       Password:
         description: Must be hashed
         type: string
-      accType:
-        description: '"admin" or "standard"'
-        type: string
+      admin:
+        type: boolean
       enabled:
         type: boolean
       id:
@@ -64,6 +65,41 @@ info:
   title: Project. Stock Exchange API
   version: "1.0"
 paths:
+  /api/v1/admin/activation:
+    post:
+      consumes:
+      - application/json
+      description: 첫 번째 관리자 계정을 활성화합니다. 이 작업은 primary admin만 수행할 수 있습니다.
+      parameters:
+      - description: Basic {BASE64_ENCODED_CREDENTIALS}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 관리자 계정 활성화 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 접근 거부 또는 권한 없음
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 첫 번째 관리자 계정 활성화
+      tags:
+      - Admin - Activation
   /api/v1/admin/symbol:
     get:
       description: 상장된 모든 심볼의 리스트를 반환합니다.
@@ -91,7 +127,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -137,7 +173,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -146,6 +182,53 @@ paths:
       tags:
       - Admin - Symbol
   /api/v1/admin/symbol/{symbol}:
+    delete:
+      description: 심볼을 상장 폐지 상태로 변경합니다.
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: 상장 폐지 사유
+        in: header
+        name: reason
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 상장 폐지 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 심볼 상장 폐지
+      tags:
+      - Admin - Symbol
     get:
       description: 특정 심볼의 정보를 반환합니다.
       parameters:
@@ -181,12 +264,244 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
             type: object
       summary: 특정 심볼 정보 조회
+      tags:
+      - Admin - Symbol
+  /api/v1/admin/symbol/{symbol}/minimum-order-quantity:
+    patch:
+      description: 심볼의 최소 주문 수량을 설정합니다.
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: '최소 주문 수량 (예: 1)'
+        in: query
+        name: minimum_order_quantity
+        required: true
+        type: number
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 최소 주문 수량 변경 메시지 반환
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 최소 주문 수량 설정
+      tags:
+      - Admin - Symbol
+  /api/v1/admin/symbol/{symbol}/status/activate:
+    patch:
+      description: 심볼을 거래 활성화 상태로 변경합니다.
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 상태 변경 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 심볼 거래 활성화
+      tags:
+      - Admin - Symbol
+  /api/v1/admin/symbol/{symbol}/status/inactivate:
+    patch:
+      description: 심볼을 거래 준비 완료 상태로 변경합니다. (비활성화 상태로 설정)
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 상태 변경 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 심볼 거래 준비 완료 (비활성화 상태로 변경)
+      tags:
+      - Admin - Symbol
+  /api/v1/admin/symbol/{symbol}/status/suspend:
+    patch:
+      description: 심볼을 거래 비활성화 상태로 변경합니다.
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: 비활성화 사유
+        in: header
+        name: reason
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 상태 변경 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 심볼 거래 비활성화
+      tags:
+      - Admin - Symbol
+  /api/v1/admin/symbol/{symbol}/tick-size:
+    patch:
+      description: 심볼의 틱 사이즈를 설정합니다.
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: '틱 사이즈 (예: 0.01)'
+        in: query
+        name: tick_size
+        required: true
+        type: number
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 틱 사이즈 변경 메시지 반환
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 틱 사이즈 설정
       tags:
       - Admin - Symbol
   /api/v1/admin/user:
@@ -216,7 +531,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -248,7 +563,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -296,7 +611,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -340,7 +655,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -384,7 +699,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -396,7 +711,7 @@ paths:
     get:
       description: 유효한 계정으로 인증된 경우 "Authenticated" 메시지와 유저 정보를 반환합니다.
       parameters:
-      - description: Basic {base64_encoded_credentials}
+      - description: Basic {BASE64_ENCODED_CREDENTIALS}
         in: header
         name: Authorization
         required: true
@@ -450,12 +765,39 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
             type: object
       summary: 유저 등록
+      tags:
+      - Auth
+  /api/v1/auth/api:
+    get:
+      consumes:
+      - application/json
+      description: API 키 상태 확인
+      parameters:
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 API 키 정보 반환
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties: true
+            type: object
+      summary: API 키 상태 확인
       tags:
       - Auth
   /api/v1/auth/token:
@@ -488,7 +830,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 서버 오류 시 에러 메시지 반환
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
             additionalProperties:
               type: string
@@ -512,30 +854,45 @@ paths:
       summary: 서버 상태 확인
       tags:
       - Health
-    post:
-      consumes:
-      - application/json
-      description: API 키 상태 확인 및 서버 상태 확인
-      parameters:
-      - description: Bearer {API_KEY}
-        in: header
-        name: Authorization
-        required: true
-        type: string
+  /api/v1/market/status:
+    get:
+      description: 거래소의 현재 세션 상태(오픈, 클로즈 등)를 반환합니다.
       produces:
       - application/json
       responses:
         "200":
-          description: 성공 시 서버 상태 및 API 키 정보 반환
+          description: 성공 시 세션 상태 반환
           schema:
-            additionalProperties: true
+            additionalProperties:
+              type: string
             type: object
-        "401":
-          description: 인증 실패 시 에러 메시지 반환
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
           schema:
-            additionalProperties: true
+            additionalProperties:
+              type: string
             type: object
-      summary: API 키 상태 확인 및 서버 상태 확인
+      summary: 거래소 세션 정보 조회
       tags:
-      - Health
+      - Market - Status
+  /api/v1/market/status/exchange-data:
+    get:
+      description: 거래소의 현재 데이터(심볼, 티커 등)를 반환합니다.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 거래소 데이터 반환
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 거래소 데이터 조회
+      tags:
+      - Market - Status
 swagger: "2.0"

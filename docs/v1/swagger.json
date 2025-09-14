@@ -13,6 +13,59 @@
     "host": "localhost:4000",
     "basePath": "/",
     "paths": {
+        "/api/v1/admin/activation": {
+            "post": {
+                "description": "첫 번째 관리자 계정을 활성화합니다. 이 작업은 primary admin만 수행할 수 있습니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Activation"
+                ],
+                "summary": "첫 번째 관리자 계정 활성화",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Basic {BASE64_ENCODED_CREDENTIALS}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 관리자 계정 활성화 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "접근 거부 또는 권한 없음",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/symbol": {
             "get": {
                 "description": "상장된 모든 심볼의 리스트를 반환합니다.",
@@ -55,7 +108,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -124,7 +177,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -190,7 +243,423 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "심볼을 상장 폐지 상태로 변경합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Symbol"
+                ],
+                "summary": "심볼 상장 폐지",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "상장 폐지 사유",
+                        "name": "reason",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 상장 폐지 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/symbol/{symbol}/minimum-order-quantity": {
+            "patch": {
+                "description": "심볼의 최소 주문 수량을 설정합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Symbol"
+                ],
+                "summary": "최소 주문 수량 설정",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "최소 주문 수량 (예: 1)",
+                        "name": "minimum_order_quantity",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 최소 주문 수량 변경 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/symbol/{symbol}/status/activate": {
+            "patch": {
+                "description": "심볼을 거래 활성화 상태로 변경합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Symbol"
+                ],
+                "summary": "심볼 거래 활성화",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 상태 변경 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/symbol/{symbol}/status/inactivate": {
+            "patch": {
+                "description": "심볼을 거래 준비 완료 상태로 변경합니다. (비활성화 상태로 설정)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Symbol"
+                ],
+                "summary": "심볼 거래 준비 완료 (비활성화 상태로 변경)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 상태 변경 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/symbol/{symbol}/status/suspend": {
+            "patch": {
+                "description": "심볼을 거래 비활성화 상태로 변경합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Symbol"
+                ],
+                "summary": "심볼 거래 비활성화",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "비활성화 사유",
+                        "name": "reason",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 상태 변경 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/symbol/{symbol}/tick-size": {
+            "patch": {
+                "description": "심볼의 틱 사이즈를 설정합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Symbol"
+                ],
+                "summary": "틱 사이즈 설정",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "틱 사이즈 (예: 0.01)",
+                        "name": "tick_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 틱 사이즈 변경 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -243,7 +712,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -291,7 +760,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -363,7 +832,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -429,7 +898,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -495,7 +964,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -519,7 +988,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Basic {base64_encoded_credentials}",
+                        "description": "Basic {BASE64_ENCODED_CREDENTIALS}",
                         "name": "Authorization",
                         "in": "header",
                         "required": true
@@ -594,12 +1063,52 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/api": {
+            "get": {
+                "description": "API 키 상태 확인",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "API 키 상태 확인",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 API 키 정보 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -651,7 +1160,7 @@
                         }
                     },
                     "500": {
-                        "description": "서버 오류 시 에러 메시지 반환",
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -684,41 +1193,65 @@
                         }
                     }
                 }
-            },
-            "post": {
-                "description": "API 키 상태 확인 및 서버 상태 확인",
-                "consumes": [
-                    "application/json"
-                ],
+            }
+        },
+        "/api/v1/market/status": {
+            "get": {
+                "description": "거래소의 현재 세션 상태(오픈, 클로즈 등)를 반환합니다.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Health"
+                    "Market - Status"
                 ],
-                "summary": "API 키 상태 확인 및 서버 상태 확인",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer {API_KEY}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
+                "summary": "거래소 세션 정보 조회",
                 "responses": {
                     "200": {
-                        "description": "성공 시 서버 상태 및 API 키 정보 반환",
+                        "description": "성공 시 세션 상태 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/market/status/exchange-data": {
+            "get": {
+                "description": "거래소의 현재 데이터(심볼, 티커 등)를 반환합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market - Status"
+                ],
+                "summary": "거래소 데이터 조회",
+                "responses": {
+                    "200": {
+                        "description": "성공 시 거래소 데이터 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
-                    "401": {
-                        "description": "인증 실패 시 에러 메시지 반환",
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -769,6 +1302,9 @@
                 "tick_size": {
                     "type": "number"
                 },
+                "total_stocks": {
+                    "type": "integer"
+                },
                 "type": {
                     "description": "\"stock\", \"index\" 등",
                     "type": "string"
@@ -791,9 +1327,8 @@
                     "description": "Must be hashed",
                     "type": "string"
                 },
-                "accType": {
-                    "description": "\"admin\" or \"standard\"",
-                    "type": "string"
+                "admin": {
+                    "type": "boolean"
                 },
                 "enabled": {
                     "type": "boolean"

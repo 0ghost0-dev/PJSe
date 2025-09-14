@@ -1,11 +1,16 @@
 package main
 
 import (
-	app2 "PJS_Exchange/app"
+	"PJS_Exchange/databases"
+	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/exchanges"
-	router "PJS_Exchange/routes/api"
+	router "PJS_Exchange/routes"
+	"PJS_Exchange/singletons/postgresApp"
+	"PJS_Exchange/sys"
 	"PJS_Exchange/utils"
+	"context"
 	"errors"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -26,17 +31,29 @@ func main() {
 	utils.InitEnv()
 
 	// 싱글톤 앱 초기화
-	st := app2.GetApp()
+	st := postgresApp.Get()
 	defer st.Close()
+
+	// Redis 초기화
+	redisClient := databases.NewRedisClient()
+	defer func(redisClient *databases.RedisClient) {
+		err := redisClient.Close()
+		if err != nil {
+			println("Failed to close Redis client: " + err.Error())
+		}
+	}(redisClient)
 
 	ex, err := exchanges.Load()
 	if err != nil {
 		panic("Failed to load exchange info: " + err.Error())
 	}
-	println("Loaded exchange: " + ex.Name + " in " + ex.Country)
+	_ = exchanges.UpdateMarketStatus()
+	println("Loaded exchange: " + ex.Name + " in " + ex.Country + " | Session: " + exchanges.MarketStatus)
+
+	go exchanges.RunWorkerPool()
 
 	// Fiber 앱 생성
-	app := fiber.New(fiber.Config{
+	sv := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			var e *fiber.Error
@@ -50,66 +67,96 @@ func main() {
 		},
 	})
 
-	app.Use(recover.New())
-	app.Use(logger.New())
-	app.Use(cors.New())
-	app.Use(compress.New())
+	sv.Use(recover.New())
+	sv.Use(logger.New())
+	sv.Use(cors.New())
+	sv.Use(compress.New())
 
-	//ctx := context.Background()
+	// 테스트용 DB 초기화
+	//testDB(st)
 
-	/* 테스트 유저 생성, 활성화, API 키 발급 */
-	//timeA := time.Now().Add(60 * time.Minute)
-	//
-	//acceptCode, _, _ := st.AcceptCodeRepo().GenerateAcceptCode(ctx, &timeA)
-	////acceptCode := "TESTCODE1234"
-	//pw, _ := utils.HashPassword("password123")
-	//_, errUC := st.UserRepo().CreateUser(ctx, "테스트 증권사", "test@example.com", pw, acceptCode)
-	//if errUC != nil {
-	//	println("Failed to create test user: " + errUC.Error())
-	//} else {
-	//	errUE := st.UserRepo().EnableUser(ctx, 1)
-	//	if errUE != nil {
-	//		println("Failed to enable test user: " + errUE.Error())
-	//	}
-	//	apiKey, _ := st.APIKeyRepo().GetUserAPIKeys(ctx, "1")
-	//	if apiKey == nil {
-	//		apiKey, _, err := st.APIKeyRepo().CreateAPIKey(ctx, "1", "Test API Key", postgres.APIKeyScope{APIKeyRead: true, APIKeyWrite: true, AdminSystemRead: true, AdminSystemWrite: true, AdminSymbolManage: true, AdminUserManage: true, AdminAPIKeyManage: true}, &timeA)
-	//		if err != nil {
-	//			println("Failed to create API key for test user: ", err.Error())
-	//		} else {
-	//			println("Test user API key created:", apiKey)
-	//		}
-	//	}
-	//}
-	/* 테스트 유저 생성, 활성화, API 키 발급 */
-
-	/* 테스트 심볼 상장 */
-	//sym := &postgres.Symbol{
-	//	Symbol:               "sml",
-	//	Name:                 "샘플주식회사",
-	//	Detail:               "샘플 주식 회사입니다.",
-	//	Url:                  "https://example.com/test-stock",
-	//	Logo:                 "https://example.com/test-stock/logo.png",
-	//	Market:               "PJSe",
-	//	Type:                 "stock",
-	//	MinimumOrderQuantity: 1,
-	//	TickSize:             1,
-	//	Status: postgres.Status{
-	//		Status: postgres.StatusInactive,
-	//		Reason: "",
-	//	},
-	//}
-	//
-	//_, errLS := st.SymbolRepo().SymbolListing(ctx, sym)
-	//if errLS != nil {
-	//	println("Failed to list test symbol: " + errLS.Error())
-	//} else {
-	//	println("Test symbol listed:", sym.Symbol)
-	//}
-	/* 테스트 심볼 상장 */
+	// 서버를 처름 시작하는 경우 관리자 계정 생성용 accept code 생성
+	sysInfo, err := sys.Get()
+	if err != nil {
+		println("Failed to get system info: " + err.Error())
+	} else {
+		if sysInfo.InitialAcceptCode == false {
+			ctx := context.Background()
+			timeA := time.Now().Add(60 * time.Minute)
+			acceptCode, _, err := st.AcceptCodeRepo().GenerateAcceptCodeForAdmin(ctx, &timeA)
+			if err != nil {
+				println("Failed to create initial accept code: " + err.Error())
+			} else {
+				sysInfo.InitialAcceptCode = true
+				errUS := sys.Edit(sysInfo)
+				if errUS != nil {
+					println("Failed to update system info: " + errUS.Error())
+				} else {
+					println("Initial accept code created: " + acceptCode + " (valid for 60 minutes)")
+					println("Check the 'guides/admin.md' for how to use it to create the admin account.")
+				}
+			}
+		}
+	}
 
 	// 라우터 설정
-	router.SetupRoutes(app)
+	router.SetupAPIRoutes(sv)
+	router.SetupWebSocketRoutes(sv)
 
-	log.Fatal(app.Listen(":4000"))
+	log.Fatal(sv.Listen(":" + utils.GetEnv("PORT", "4000")))
+}
+
+func testDB(st *postgresApp.App) {
+	ctx := context.Background()
+
+	/* 테스트 유저 생성, 활성화, API 키 발급 */
+	timeA := time.Now().Add(60 * time.Minute)
+
+	acceptCode, _, _ := st.AcceptCodeRepo().GenerateAcceptCode(ctx, &timeA)
+	//acceptCode := "TESTCODE1234"
+	pw, _ := utils.HashPassword("password123")
+	_, errUC := st.UserRepo().CreateUser(ctx, "테스트 증권사", "test@example.com", pw, acceptCode)
+	if errUC != nil {
+		println("Failed to create test user: " + errUC.Error())
+	} else {
+		errUE := st.UserRepo().EnableUser(ctx, 1)
+		if errUE != nil {
+			println("Failed to enable test user: " + errUE.Error())
+		}
+		apiKey, _ := st.APIKeyRepo().GetUserAPIKeys(ctx, "1")
+		if apiKey == nil {
+			apiKey, _, err := st.APIKeyRepo().CreateAPIKey(ctx, "1", "Test API Key", postgresql.APIKeyScope{APIKeyRead: true, APIKeyWrite: true, AdminSystemRead: true, AdminSystemWrite: true, AdminSymbolManage: true, AdminUserManage: true, AdminAPIKeyManage: true}, &timeA)
+			if err != nil {
+				println("Failed to create API key for test user: ", err.Error())
+			} else {
+				println("Test user API key created:", apiKey)
+			}
+		}
+	}
+	/* 테스트 유저 생성, 활성화, API 키 발급 */
+
+	/* 테스트 심볼 상장 */
+	sym := &postgresql.Symbol{
+		Symbol:               "sml",
+		Name:                 "샘플주식회사",
+		Detail:               "샘플 주식 회사입니다.",
+		Url:                  "https://example.com/test-stock",
+		Logo:                 "https://example.com/test-stock/logo.png",
+		Market:               "PJSe",
+		Type:                 "stock",
+		MinimumOrderQuantity: 1,
+		TickSize:             1,
+		Status: postgresql.Status{
+			Status: postgresql.StatusInactive,
+			Reason: "",
+		},
+	}
+
+	_, errLS := st.SymbolRepo().SymbolListing(ctx, sym)
+	if errLS != nil {
+		println("Failed to list test symbol: " + errLS.Error())
+	} else {
+		println("Test symbol listed:", sym.Symbol)
+	}
+	/* 테스트 심볼 상장 */
 }

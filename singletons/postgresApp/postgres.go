@@ -1,11 +1,11 @@
-package app
+package postgresApp
 
 import (
 	"context"
 	"sync"
 
 	"PJS_Exchange/databases"
-	"PJS_Exchange/databases/postgres"
+	"PJS_Exchange/databases/postgresql"
 )
 
 type App struct {
@@ -14,10 +14,10 @@ type App struct {
 }
 
 type Repositories struct {
-	User       *postgres.UserDBRepository
-	Symbol     *postgres.SymbolDBRepository
-	APIKey     *postgres.APIKeyDBRepository
-	AcceptCode *postgres.AcceptCodeDBRepository
+	User       *postgresql.UserDBRepository
+	Symbol     *postgresql.SymbolDBRepository
+	APIKey     *postgresql.APIKeyDBRepository
+	AcceptCode *postgresql.AcceptCodeDBRepository
 }
 
 var (
@@ -25,7 +25,7 @@ var (
 	appOnce     sync.Once
 )
 
-func GetApp() *App {
+func Get() *App {
 	appOnce.Do(func() {
 		appInstance = initializeApp()
 	})
@@ -40,10 +40,10 @@ func initializeApp() *App {
 		panic("Failed to connect to Postgres DB: " + err.Error())
 	}
 
-	acceptRepo := postgres.NewAcceptCodeRepository(postgresDB)
-	userRepo := postgres.NewUserRepository(postgresDB, acceptRepo)
-	symbolRepo := postgres.NewSymbolRepository(postgresDB)
-	apikeyRepo := postgres.NewAPIKeyRepository(postgresDB)
+	acceptRepo := postgresql.NewAcceptCodeRepository(postgresDB)
+	userRepo := postgresql.NewUserRepository(postgresDB, acceptRepo)
+	symbolRepo := postgresql.NewSymbolRepository(postgresDB)
+	apikeyRepo := postgresql.NewAPIKeyRepository(postgresDB)
 
 	repos := &Repositories{
 		AcceptCode: acceptRepo,
@@ -78,10 +78,10 @@ func createTables(ctx context.Context, repos *Repositories) error {
 	return nil
 }
 
-func (app *App) UserRepo() *postgres.UserDBRepository     { return app.Repositories.User }
-func (app *App) SymbolRepo() *postgres.SymbolDBRepository { return app.Repositories.Symbol }
-func (app *App) APIKeyRepo() *postgres.APIKeyDBRepository { return app.Repositories.APIKey }
-func (app *App) AcceptCodeRepo() *postgres.AcceptCodeDBRepository {
+func (app *App) UserRepo() *postgresql.UserDBRepository     { return app.Repositories.User }
+func (app *App) SymbolRepo() *postgresql.SymbolDBRepository { return app.Repositories.Symbol }
+func (app *App) APIKeyRepo() *postgresql.APIKeyDBRepository { return app.Repositories.APIKey }
+func (app *App) AcceptCodeRepo() *postgresql.AcceptCodeDBRepository {
 	return app.Repositories.AcceptCode
 }
 

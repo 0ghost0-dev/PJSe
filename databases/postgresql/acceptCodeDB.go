@@ -1,4 +1,4 @@
-package postgres
+package postgresql
 
 import (
 	"PJS_Exchange/databases"
@@ -19,11 +19,13 @@ type AcceptCode struct {
 	CreatedAt  time.Time  `json:"created_at"`
 	ExpiresAt  *time.Time `json:"expires_at"`
 	Used       bool       `json:"used"`
+	Admin      bool       `json:"admin"`
 	UserID     *int       `json:"user_id"`
 }
 
 type AcceptCodeRepository interface {
 	GenerateAcceptCode(ctx context.Context, userID int) (*AcceptCode, error)
+	GenerateAcceptCodeForAdmin(ctx context.Context) (*AcceptCode, error)
 	ValidateAcceptCode(ctx context.Context, code string) (bool, error)
 	RelationShipUser(ctx context.Context, code string, userID int) error
 }
@@ -45,6 +47,7 @@ func (r *AcceptCodeDBRepository) CreateAcceptCodesTable(ctx context.Context) err
     created_at TIMESTAMPTZ DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL,
     used BOOLEAN NOT NULL DEFAULT FALSE,
+    admin BOOLEAN NOT NULL DEFAULT FALSE,
     user_id INTEGER REFERENCES users(id)
     );`
 
@@ -95,10 +98,41 @@ func (r *AcceptCodeDBRepository) GenerateAcceptCode(ctx context.Context, expires
 	return fullCode, acceptCode, nil
 }
 
-func (r *AcceptCodeDBRepository) ValidateAcceptCode(ctx context.Context, fullCode string) (bool, error) {
+func (r *AcceptCodeDBRepository) GenerateAcceptCodeForAdmin(ctx context.Context, expiresAt *time.Time) (string, *AcceptCode, error) {
+	code, err := generateRandomCode(16)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// 고유 식별자 생성
+	newUUID, _ := uuid.NewUUID()
+	codeID := "pjse-accept-" + newUUID.String()
+
+	// 실제 반환할 코드는 "식별자:원본코드" 형태
+	fullCode := fmt.Sprintf("%s:%s", codeID, code)
+
+	// bcrypt 해싱은 원본 코드만
+	hashedCode, err := bcrypt.GenerateFromPassword([]byte(code), bcrypt.DefaultCost)
+	if err != nil {
+		return "", nil, err
+	}
+
+	query := `INSERT INTO accept_codes (code_id, accept_code, expires_at, admin) VALUES ($1, $2, $3, TRUE) RETURNING id, code_id, accept_code, created_at, expires_at, used, user_id;`
+	acceptCode := &AcceptCode{}
+	err = r.db.GetPool().QueryRow(ctx, query, codeID, string(hashedCode), expiresAt).Scan(
+		&acceptCode.ID, &acceptCode.CodeID, &acceptCode.AcceptCode,
+		&acceptCode.CreatedAt, &acceptCode.ExpiresAt, &acceptCode.Used, &acceptCode.UserID)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return fullCode, acceptCode, nil
+}
+
+func (r *AcceptCodeDBRepository) ValidateAcceptCode(ctx context.Context, fullCode string) (bool, bool, error) {
 	parts := strings.Split(fullCode, ":")
 	if len(parts) != 2 {
-		return false, fmt.Errorf("invalid code format")
+		return false, false, fmt.Errorf("invalid code format")
 	}
 
 	codeID := parts[0]
@@ -107,35 +141,36 @@ func (r *AcceptCodeDBRepository) ValidateAcceptCode(ctx context.Context, fullCod
 	var storedHash string
 	var expiresAt time.Time
 	var used bool
+	var admin bool
 
 	err := r.db.GetPool().QueryRow(ctx,
-		"SELECT accept_code, expires_at, used FROM accept_codes WHERE code_id = $1",
-		codeID).Scan(&storedHash, &expiresAt, &used)
+		"SELECT accept_code, expires_at, used, admin FROM accept_codes WHERE code_id = $1",
+		codeID).Scan(&storedHash, &expiresAt, &used, &admin)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	if used {
-		return false, fmt.Errorf("code already used")
+		return false, false, fmt.Errorf("code already used")
 	}
 
 	if time.Now().After(expiresAt) {
-		return false, fmt.Errorf("accept code has expired")
+		return false, false, fmt.Errorf("accept code has expired")
 	}
 
 	// bcrypt로 실제 코드 비교
 	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(code))
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	// 사용됨으로 표시
 	_, err = r.db.GetPool().Exec(ctx, "UPDATE accept_codes SET used = TRUE WHERE code_id = $1", codeID)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
-	return true, nil
+	return true, admin, nil
 }
 
 func (r *AcceptCodeDBRepository) RelationShipUser(ctx context.Context, code string, userID int) error {

@@ -4,6 +4,7 @@ import (
 	"PJS_Exchange/utils"
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,17 +24,34 @@ type PostgresDBConfig struct {
 }
 
 func NewPostgresDBConfig() *PostgresDBConfig {
+	maxConns, err := strconv.Atoi(utils.GetEnv("POSTGRES_DB_MAX_CONNS", "20"))
+	if err != nil {
+		maxConns = 20
+	}
+	minConns, err := strconv.Atoi(utils.GetEnv("POSTGRES_DB_MIN_CONNS", "5"))
+	if err != nil {
+		minConns = 5
+	}
+	macConnsLifetime, err := strconv.Atoi(utils.GetEnv("POSTGRES_DB_MAX_CONN_LIFETIME", "3600"))
+	if err != nil {
+		macConnsLifetime = 3600
+	}
+	maxConnIdleTime, err := strconv.Atoi(utils.GetEnv("POSTGRES_DB_MAX_CONN_IDLE_TIME", "1800"))
+	if err != nil {
+		maxConnIdleTime = 1800
+	}
+
 	return &PostgresDBConfig{
 		Host:            utils.GetEnv("POSTGRES_DB_HOST", "localhost"),
 		Port:            utils.GetEnv("POSTGRES_DB_PORT", "5432"),
-		User:            utils.GetEnv("POSTGRES_DB_USER", "postgres"),
+		User:            utils.GetEnv("POSTGRES_DB_USER", "postgresql"),
 		Password:        utils.GetEnv("POSTGRES_DB_PASSWORD", "1234"),
 		DBName:          utils.GetEnv("POSTGRES_DB_NAME", "exchange_data"),
 		SSLMode:         utils.GetEnv("POSTGRES_DB_SSLMODE", "disable"),
-		MaxConns:        30,
-		MinConns:        5,
-		MaxConnLifetime: time.Hour,
-		MaxConnIdleTime: time.Minute * 30,
+		MaxConns:        int32(maxConns),
+		MinConns:        int32(minConns),
+		MaxConnLifetime: time.Second * time.Duration(macConnsLifetime),
+		MaxConnIdleTime: time.Second * time.Duration(maxConnIdleTime),
 	}
 }
 
