@@ -73,7 +73,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Market - Status"
+                    "Admin - Symbol"
                 ],
                 "summary": "상장된 모든 심볼 조회",
                 "parameters": [
@@ -195,7 +195,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Market - Status"
+                    "Admin - Symbol"
                 ],
                 "summary": "특정 심볼 정보 조회",
                 "parameters": [
@@ -376,72 +376,6 @@
                     },
                     "401": {
                         "description": "인증 실패 시 에러 메시지 반환",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "서버 오류 발생 시 에러 메시지 반환",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/admin/symbol/{symbol}/now": {
-            "get": {
-                "description": "특정 심볼의 현재가 정보를 반환합니다.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Market - Status"
-                ],
-                "summary": "특정 심볼 현재가 조회",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "심볼 (예: AAPL)",
-                        "name": "symbol",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {API_KEY}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "성공 시 심볼 현재가 정보 반환",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "인증 실패 시 에러 메시지 반환",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1261,6 +1195,511 @@
                 }
             }
         },
+        "/api/v1/market/orders/{symbol}": {
+            "get": {
+                "description": "사용자의 모든 주문을 조회합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "주문 조회",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "사용자의 모든 주문 정보",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/market/orders/{symbol}/buy": {
+            "post": {
+                "description": "지정가, 시장가 주문을 접수합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "매수 주문",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "주문 정보",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/template.CreateOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "주문이 성공적으로 접수되었음을 알리는 메시지",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "기존 매수 주문을 취소합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "매수 주문 취소",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "취소할 주문 정보",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/template.CancelOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "주문이 성공적으로 취소되었음을 알리는 메시지",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "기존 매수 주문을 수정합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "매수 주문 수정",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "수정할 주문 정보",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/template.ModifyOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "주문이 성공적으로 수정되었음을 알리는 메시지",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/market/orders/{symbol}/sell": {
+            "delete": {
+                "description": "기존 매도 주문을 취소합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "매도 주문 취소",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "취소할 주문 정보",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/template.CancelOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "주문이 성공적으로 취소되었음을 알리는 메시지",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "기존 매도 주문을 수정합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "매도 주문 수정",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "수정할 주문 정보",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/template.ModifyOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "주문이 성공적으로 수정되었음을 알리는 메시지",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/market/status": {
             "get": {
                 "description": "거래소의 현재 세션 상태(오픈, 클로즈 등)를 반환합니다.",
@@ -1323,7 +1762,192 @@
                 }
             }
         },
-        "/ws/depth/{sym}": {
+        "/api/v1/market/symbol": {
+            "get": {
+                "description": "상장된 모든 심볼의 리스트를 반환합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market - Status"
+                ],
+                "summary": "상장된 모든 심볼 조회",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 심볼 목록 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/postgresql.Symbol"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/market/symbol/{symbol}": {
+            "get": {
+                "description": "특정 심볼의 정보를 반환합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market - Status"
+                ],
+                "summary": "특정 심볼 정보 조회",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 심볼 상세 정보 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/postgresql.Symbol"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/market/symbol/{symbol}/now": {
+            "get": {
+                "description": "특정 심볼의 현재가 정보를 반환합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market - Status"
+                ],
+                "summary": "특정 심볼 현재가 조회",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: AAPL)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 심볼 현재가 정보 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ws/depth": {
             "get": {
                 "description": "일일 실시간 호가 데이터를 WebSocket을 통해 구독합니다.",
                 "produces": [
@@ -1333,6 +1957,14 @@
                     "WebSocket"
                 ],
                 "summary": "Depth WebSocket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "특정 타임스탬프 이후의 데이터를 받기 위한 옵션 (0을 입력하면 오늘 발생한 전체 데이터 수신)",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "WebSocket 연결 성공 및 구독 시작 메시지",
@@ -1380,6 +2012,14 @@
                     "WebSocket"
                 ],
                 "summary": "Ledger WebSocket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "특정 타임스탬프 이후의 데이터를 받기 위한 옵션 (0을 입력하면 오늘 발생한 전체 데이터 수신)",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "WebSocket 연결 성공 및 구독 시작 메시지",
@@ -1427,6 +2067,14 @@
                     "WebSocket"
                 ],
                 "summary": "Notify WebSocket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "특정 타임스탬프 이후의 데이터를 받기 위한 옵션 (0을 입력하면 오늘 발생한 전체 데이터 수신)",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "WebSocket 연결 성공 및 구독 시작 메시지",
@@ -1553,6 +2201,47 @@
                     "type": "integer"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "template.CancelOrderRequest": {
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "template.CreateOrderRequest": {
+            "type": "object",
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "e.g., \"limit\", \"market\", \"stop-limit\"",
+                    "type": "string"
+                }
+            }
+        },
+        "template.ModifyOrderRequest": {
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "e.g., \"limit\", \"market\", \"stop-limit\"",
                     "type": "string"
                 }
             }

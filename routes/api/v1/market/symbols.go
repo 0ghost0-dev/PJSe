@@ -44,7 +44,7 @@ func (sr *SymbolsRouter) RegisterRoutes(router fiber.Router) {
 // @Success		200				{object}	map[string][]postgresql.Symbol	"성공 시 심볼 목록 반환"
 // @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
-// @Router			/api/v1/admin/symbol [get]
+// @Router			/api/v1/market/symbol [get]
 func (sr *SymbolsRouter) symbolList(c *fiber.Ctx) error {
 	symbols, err := postgresApp.Get().SymbolRepo().GetSymbols(c.Context())
 	if err != nil {
@@ -72,7 +72,7 @@ func (sr *SymbolsRouter) symbolList(c *fiber.Ctx) error {
 // @Failure		404				{object}	map[string]string	"심볼을 찾을 수 없을 때 에러 메시지 반환"
 // @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
-// @Router			/api/v1/admin/symbol/{symbol} [get]
+// @Router			/api/v1/market/symbol/{symbol} [get]
 func (sr *SymbolsRouter) symbolDetail(c *fiber.Ctx) error {
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
@@ -105,7 +105,7 @@ func (sr *SymbolsRouter) symbolDetail(c *fiber.Ctx) error {
 // @Failure		404				{object}	map[string]string	"심볼을 찾을 수 없을 때 에러 메시지 반환"
 // @Failure		500				{object}	map[string]string	"서버 오류 발생 시 에러 메시지 반환"
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
-// @Router			/api/v1/admin/symbol/{symbol}/now [get]
+// @Router			/api/v1/market/symbol/{symbol}/now [get]
 func (sr *SymbolsRouter) symbolNow(c *fiber.Ctx) error {
 	symbolParam := c.Params("symbol")
 	return template.ErrorHandler(c, fiber.StatusNotImplemented, "Not implemented yet"+symbolParam)
