@@ -1,11 +1,11 @@
 package main
 
 import (
+	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/exchanges"
 	router "PJS_Exchange/routes"
-	"PJS_Exchange/singletons/postgresApp"
 	"PJS_Exchange/sys"
 	"PJS_Exchange/utils"
 	"context"

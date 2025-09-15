@@ -1,9 +1,10 @@
 package exchanges
 
 import (
-	"PJS_Exchange/singletons/postgresApp"
+	"PJS_Exchange/app/postgresApp"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -52,23 +53,23 @@ func processClearRedisCache() error {
 
 func worker(id int, jobChan <-chan Job, wg *sync.WaitGroup) {
 	defer wg.Done()
-	//fmt.Printf("워커 %d 시작\n", id)
+	//log.Printf("워커 %d 시작\n", id)
 
 	for {
 		select {
 		case job, ok := <-jobChan:
 			if !ok {
-				//fmt.Printf("워커 %d 종료 (채널 닫힘)\n", id)
+				//log.Printf("워커 %d 종료 (채널 닫힘)\n", id)
 				return
 			}
 
-			//fmt.Printf("워커 %d: 작업 %d 처리 중... (%s)\n", id, job.ID, job.Data)
+			//log.Printf("워커 %d: 작업 %d 처리 중... (%s)\n", id, job.ID, job.Data)
 
 			err := processJob(job)
 			if err != nil {
-				fmt.Printf("워커 %d: 작업 %d 실패 - %v\n", id, job.ID, err)
+				log.Printf("워커 %d: 작업 %d 실패 - %v\n", id, job.ID, err)
 			} else {
-				//fmt.Printf("워커 %d: 작업 %d 완료\n", id, job.ID)
+				//log.Printf("워커 %d: 작업 %d 완료\n", id, job.ID)
 			}
 		}
 	}
@@ -82,7 +83,7 @@ func scheduler(jobChan chan<- Job, wg *sync.WaitGroup) {
 
 	now := time.Now()
 	nextMinute := now.Truncate(time.Minute).Add(time.Minute)
-	//fmt.Printf("다음 실행 시간: %s (대기: %v)\n",
+	//log.Printf("다음 실행 시간: %s (대기: %v)\n",
 	//	nextMinute.Format("15:04:05"),
 	//	time.Until(nextMinute))
 
@@ -121,10 +122,10 @@ func createAndSendJob(jobChan chan<- Job, jobID *int) bool {
 
 		select {
 		case jobChan <- job:
-			//fmt.Printf("%s - %s 작업 %d 생성됨\n", currentTime, jobType, *jobID)
+			//log.Printf("%s - %s 작업 %d 생성됨\n", currentTime, jobType, *jobID)
 			*jobID++
 		default:
-			fmt.Printf("%s - 워커들이 바쁨, 작업 건너뜀\n", currentTime)
+			log.Printf("%s - 워커들이 바쁨, 작업 건너뜀\n", currentTime)
 		}
 	}
 
@@ -144,5 +145,5 @@ func RunWorkerPool() {
 	wg.Add(1)
 	go scheduler(jobChan, &wg)
 
-	fmt.Printf("Job Scheduler 시작됨 (PID: %d)\n", os.Getpid())
+	log.Printf("Job Scheduler 시작됨 (PID: %d)\n", os.Getpid())
 }

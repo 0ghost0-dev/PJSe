@@ -1,4 +1,4 @@
-package v1
+package market
 
 import (
 	"PJS_Exchange/template"
@@ -14,6 +14,7 @@ func (cr *CandlesRouter) RegisterRoutes(router fiber.Router) {
 	candlesGroup.Get("/:sym", cr.getCandles)
 }
 
+// TODO 추후 protobuf로 변경
 func (cr *CandlesRouter) getCandles(c *fiber.Ctx) error {
 	symbol := c.Params("sym")
 	return template.ErrorHandler(c, fiber.StatusNotImplemented, "Not implemented: GET /candles/"+symbol)

@@ -99,9 +99,8 @@ func registerV1MarketRoutes(router fiber.Router) {
 	routers := []RouteRegistrar{
 		&v1market.StatusRouter{},
 		&v1market.CandlesRouter{},
-		&v1market.DepthRouter{},
-		&v1market.LedgerRouter{},
 		&v1market.OrdersRouter{},
+		&v1market.SymbolsRouter{},
 		// 새로운 라우터가 추가되면 여기에 추가
 	}
 
@@ -117,6 +116,7 @@ func registerWebSocketRoutes(router fiber.Router) {
 		//&ws.TradeRouter{},
 		&ws.DepthRouter{},
 		&ws.LedgerRouter{},
+		&ws.NotifyRouter{},
 		// 새로운 라우터가 추가되면 여기에 추가
 	}
 

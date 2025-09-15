@@ -1,10 +1,13 @@
-package v1
+package market
 
 import (
 	"PJS_Exchange/exchanges"
+	"PJS_Exchange/middleware"
 	"PJS_Exchange/template"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 type StatusRouter struct{}
@@ -12,12 +15,23 @@ type StatusRouter struct{}
 func (sr *StatusRouter) RegisterRoutes(router fiber.Router) {
 	statusGroup := router.Group("/status")
 
+	statusGroup.Use(limiter.New(limiter.Config{
+		Max:        10, // 최대 요청 수
+		Expiration: 60 * time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			return template.ErrorHandler(c,
+				fiber.StatusTooManyRequests,
+				"Too many requests. Please try again later.")
+		},
+	}), middleware.AuthAPIKeyMiddleware(middleware.AuthConfig{Bypass: false}))
+
 	statusGroup.Get("/", sr.getExchangeData)
 	statusGroup.Get("/session", sr.getSession)
 }
 
 // === 핸들러 함수들 ===
 
+// TODO: 추후 protobuf로 변경
 // @Summary		거래소 세션 정보 조회
 // @Description	거래소의 현재 세션 상태(오픈, 클로즈 등)를 반환합니다.
 // @Tags			Market - Status
@@ -31,6 +45,7 @@ func (sr *StatusRouter) getSession(c *fiber.Ctx) error {
 	})
 }
 
+// TODO: 추후 protobuf로 변경
 // @Summary		거래소 데이터 조회
 // @Description	거래소의 현재 데이터(심볼, 티커 등)를 반환합니다.
 // @Tags			Market - Status

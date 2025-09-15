@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  postgres.Status:
+  postgresql.Status:
     properties:
       reason:
         description: 거래정지 혹은 상장폐지 사유
@@ -9,7 +9,7 @@ definitions:
         description: '"active", "inactive", "init", "suspended", "delisted"'
         type: string
     type: object
-  postgres.Symbol:
+  postgresql.Symbol:
     properties:
       detail:
         type: string
@@ -24,9 +24,13 @@ definitions:
       name:
         type: string
       status:
-        $ref: '#/definitions/postgres.Status'
+        $ref: '#/definitions/postgresql.Status'
       symbol:
         type: string
+      tags:
+        items:
+          type: string
+        type: array
       tick_size:
         type: number
       total_stocks:
@@ -37,7 +41,7 @@ definitions:
       url:
         type: string
     type: object
-  postgres.User:
+  postgresql.User:
     properties:
       CreatedAt:
         type: string
@@ -51,6 +55,8 @@ definitions:
       enabled:
         type: boolean
       id:
+        type: integer
+      type:
         type: integer
       username:
         type: string
@@ -66,7 +72,7 @@ info:
   version: "1.0"
 paths:
   /api/v1/admin/activation:
-    post:
+    patch:
       consumes:
       - application/json
       description: 첫 번째 관리자 계정을 활성화합니다. 이 작업은 primary admin만 수행할 수 있습니다.
@@ -117,7 +123,7 @@ paths:
           schema:
             additionalProperties:
               items:
-                $ref: '#/definitions/postgres.Symbol'
+                $ref: '#/definitions/postgresql.Symbol'
               type: array
             type: object
         "401":
@@ -134,7 +140,7 @@ paths:
             type: object
       summary: 상장된 모든 심볼 조회
       tags:
-      - Admin - Symbol
+      - Market - Status
     post:
       consumes:
       - application/json
@@ -145,7 +151,7 @@ paths:
         name: symbol
         required: true
         schema:
-          $ref: '#/definitions/postgres.Symbol'
+          $ref: '#/definitions/postgresql.Symbol'
       - description: Bearer {API_KEY}
         in: header
         name: Authorization
@@ -158,7 +164,7 @@ paths:
           description: 성공 시 상장된 심볼 정보 반환
           schema:
             additionalProperties:
-              $ref: '#/definitions/postgres.Symbol'
+              $ref: '#/definitions/postgresql.Symbol'
             type: object
         "400":
           description: 잘못된 요청 시 에러 메시지 반환
@@ -249,7 +255,7 @@ paths:
           description: 성공 시 심볼 상세 정보 반환
           schema:
             additionalProperties:
-              $ref: '#/definitions/postgres.Symbol'
+              $ref: '#/definitions/postgresql.Symbol'
             type: object
         "401":
           description: 인증 실패 시 에러 메시지 반환
@@ -271,7 +277,7 @@ paths:
             type: object
       summary: 특정 심볼 정보 조회
       tags:
-      - Admin - Symbol
+      - Market - Status
   /api/v1/admin/symbol/{symbol}/minimum-order-quantity:
     patch:
       description: 심볼의 최소 주문 수량을 설정합니다.
@@ -320,6 +326,50 @@ paths:
       summary: 최소 주문 수량 설정
       tags:
       - Admin - Symbol
+  /api/v1/admin/symbol/{symbol}/now:
+    get:
+      description: 특정 심볼의 현재가 정보를 반환합니다.
+      parameters:
+      - description: '심볼 (예: AAPL)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 성공 시 심볼 현재가 정보 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 심볼을 찾을 수 없을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 특정 심볼 현재가 조회
+      tags:
+      - Market - Status
   /api/v1/admin/symbol/{symbol}/status/activate:
     patch:
       description: 심볼을 거래 활성화 상태로 변경합니다.
@@ -591,7 +641,7 @@ paths:
         "200":
           description: 성공 시 유저 상세 정보 반환
           schema:
-            $ref: '#/definitions/postgres.User'
+            $ref: '#/definitions/postgresql.User'
         "400":
           description: 잘못된 요청 시 에러 메시지 반환
           schema:
@@ -895,4 +945,97 @@ paths:
       summary: 거래소 데이터 조회
       tags:
       - Market - Status
+  /ws/depth/{sym}:
+    get:
+      description: 일일 실시간 호가 데이터를 WebSocket을 통해 구독합니다.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: WebSocket 연결 성공 및 구독 시작 메시지
+          schema:
+            type: string
+        "400":
+          description: 잘못된 요청
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Depth WebSocket
+      tags:
+      - WebSocket
+  /ws/ledger:
+    get:
+      description: 일일 실시간 체결 데이터를 WebSocket을 통해 구독합니다.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: WebSocket 연결 성공 및 구독 시작 메시지
+          schema:
+            type: string
+        "400":
+          description: 잘못된 요청
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Ledger WebSocket
+      tags:
+      - WebSocket
+  /ws/notify:
+    get:
+      description: 일일 실시간 알림 데이터를 WebSocket을 통해 구독합니다.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: WebSocket 연결 성공 및 구독 시작 메시지
+          schema:
+            type: string
+        "400":
+          description: 잘못된 요청
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Notify WebSocket
+      tags:
+      - WebSocket
 swagger: "2.0"

@@ -1,13 +1,12 @@
 package v1
 
 import (
+	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/middleware"
-	"PJS_Exchange/singletons/postgresApp"
 	"PJS_Exchange/template"
 	"PJS_Exchange/utils"
-	"context"
-	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -82,23 +81,26 @@ func (ar *AuthRouter) registerUser(c *fiber.Ctx) error {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	ctx := context.Background()
+	if req.Username == "" || req.Email == "" || req.Password == "" || req.AcceptCode == "" {
+		return template.ErrorHandler(c, fiber.StatusBadRequest, "All fields are required")
+	}
+
 	pw, err := utils.HashPassword(req.Password)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to hash password")
 	}
-	user, err := postgresApp.Get().UserRepo().CreateUser(ctx, req.Username, req.Email, pw, req.AcceptCode)
+	user, err := postgresApp.Get().UserRepo().CreateUser(c.Context(), req.Username, req.Email, pw, req.AcceptCode)
 	if err != nil {
 		// 만약 err 내용에 "failed to validate accept code"가 포함되어 있으면 400 반환
 		if strings.Contains(err.Error(), "failed to validate accept code") || strings.Contains(err.Error(), "invalid or used accept code") {
-			//fmt.Println("Invalid or used access code:", err)
+			//log.Println("Invalid or used access code:", err)
 			return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid or used access code")
 		} else {
-			fmt.Println("Error creating user:", err)
+			log.Println("Error creating user:", err)
 			return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to create user")
 		}
 	}
-	fmt.Println("User created:", user.Username)
+	log.Println("User created:", user.Username)
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"username": user.Username,
 		"email":    user.Email,
@@ -143,7 +145,6 @@ func (ar *AuthRouter) getAPIKeyDetails(c *fiber.Ctx) error {
 // @Router			/api/v1/auth/token [post]
 func (ar *AuthRouter) generateTempAPIKey(c *fiber.Ctx) error {
 	user := c.Locals("user").(*postgresql.User)
-	ctx := context.Background()
 
 	// 새로운 API 키 생성
 	timeA := time.Now().Add(4 * time.Hour)
@@ -152,12 +153,12 @@ func (ar *AuthRouter) generateTempAPIKey(c *fiber.Ctx) error {
 	var apiKeyData *postgresql.APIKey
 	var err error
 	if user.Admin {
-		newAPIKey, apiKeyData, err = postgresApp.Get().APIKeyRepo().CreateAPIKey(ctx, strconv.Itoa(user.ID), "Temporary Auth API Key (Admin)", postgresql.APIKeyScope{APIKeyRead: true, APIKeyWrite: true, AdminAPIKeyManage: true, AdminSymbolManage: true, AdminUserManage: true, AdminSystemWrite: true, AdminSystemRead: true}, &timeA)
+		newAPIKey, apiKeyData, err = postgresApp.Get().APIKeyRepo().CreateAPIKey(c.Context(), strconv.Itoa(user.ID), "Temporary Auth API Key (Admin)", postgresql.FullAdminScopes(), &timeA)
 	} else {
-		newAPIKey, apiKeyData, err = postgresApp.Get().APIKeyRepo().CreateAPIKey(ctx, strconv.Itoa(user.ID), "Temporary Auth API Key", postgresql.APIKeyScope{APIKeyRead: true, APIKeyWrite: true}, &timeA)
+		newAPIKey, apiKeyData, err = postgresApp.Get().APIKeyRepo().CreateAPIKey(c.Context(), strconv.Itoa(user.ID), "Temporary Auth API Key", postgresql.APIKeyReadWriteScopes(), &timeA)
 	}
 	if err != nil {
-		fmt.Println("Error creating API key:", err)
+		log.Println("Error creating API key:", err)
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to create API key")
 	}
 	return c.Status(200).JSON(fiber.Map{

@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/singletons/postgresApp"
 	"PJS_Exchange/utils"
 	"encoding/base64"
 	"strconv"

@@ -21,18 +21,19 @@ type Status struct {
 }
 
 type Symbol struct {
-	ID                   int     `json:"id"`
-	Symbol               string  `json:"symbol"`
-	Name                 string  `json:"name"`
-	Detail               string  `json:"detail"`
-	Url                  string  `json:"url"`
-	Logo                 string  `json:"logo"`
-	Market               string  `json:"market"`
-	Type                 string  `json:"type"` // "stock", "index" 등
-	MinimumOrderQuantity float32 `json:"minimum_order_quantity"`
-	TickSize             float32 `json:"tick_size"`
-	TotalStocks          int64   `json:"total_stocks"`
-	Status               Status  `json:"status"`
+	ID                   int      `json:"id"`
+	Symbol               string   `json:"symbol"`
+	Name                 string   `json:"name"`
+	Detail               string   `json:"detail"`
+	Url                  string   `json:"url"`
+	Logo                 string   `json:"logo"`
+	Market               string   `json:"market"`
+	Type                 string   `json:"type"` // "stock", "index" 등
+	MinimumOrderQuantity float32  `json:"minimum_order_quantity"`
+	TickSize             float32  `json:"tick_size"`
+	TotalStocks          int64    `json:"total_stocks"`
+	Tags                 []string `json:"tags,omitempty"`
+	Status               Status   `json:"status"`
 }
 
 type SymbolRepository interface {
@@ -60,6 +61,7 @@ func (r *SymbolDBRepository) CreateSymbolsTable(ctx context.Context) error {
 		minimum_order_quantity REAL DEFAULT 1,
 		tick_size REAL DEFAULT 1,
 		total_stocks BIGINT DEFAULT 0,
+		tags TEXT[],
 		status JSONB DEFAULT '{"status": "inactive", "reason": ""}'::jsonb
 	);
 	`
@@ -144,7 +146,7 @@ func (r *SymbolDBRepository) GetSymbolData(ctx context.Context, symbol string) (
 
 	err := r.db.GetPool().QueryRow(ctx, query, symbol).Scan(
 		&sym.ID, &sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
-		&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, sym.TotalStocks, &statusJSON)
+		&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &statusJSON)
 
 	if err != nil {
 		return nil, err
@@ -156,6 +158,13 @@ func (r *SymbolDBRepository) GetSymbolData(ctx context.Context, symbol string) (
 	}
 
 	return sym, nil
+}
+
+func (r *SymbolDBRepository) IsSymbolExist(ctx context.Context, symbol string) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM symbols WHERE symbol = $1)`
+	_ = r.db.GetPool().QueryRow(ctx, query, symbol).Scan(&exists)
+	return exists, fmt.Errorf("Symbol '" + symbol + "' does not exist.")
 }
 
 func (r *SymbolDBRepository) UpdateSymbolStatus(ctx context.Context, symbol string, status Status) error {
@@ -179,4 +188,25 @@ func (r *SymbolDBRepository) SetMinimumOrderQuantity(ctx context.Context, symbol
 	query := `UPDATE symbols SET minimum_order_quantity = $1 WHERE symbol = $2`
 	_, err := r.db.GetPool().Exec(ctx, query, minQty, symbol)
 	return err
+}
+
+func (r *SymbolDBRepository) SumTotalStocks(ctx context.Context, symbol string, delta int64) error {
+	query := `UPDATE symbols SET total_stocks = total_stocks + $1 WHERE symbol = $2`
+	_, err := r.db.GetPool().Exec(ctx, query, delta, symbol)
+	return err
+}
+
+// 추가 유틸리티 메서드들
+
+func IsSymbolStructComplete(sym *Symbol) bool {
+	return sym.Symbol != "" &&
+		sym.Name != "" &&
+		sym.Market != "" &&
+		sym.Type != "" &&
+		sym.MinimumOrderQuantity > 0 &&
+		sym.TickSize > 0 &&
+		sym.Detail != "" &&
+		sym.Url != "" &&
+		sym.Logo != "" &&
+		sym.TotalStocks >= 0
 }

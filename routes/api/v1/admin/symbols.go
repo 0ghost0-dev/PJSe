@@ -1,11 +1,10 @@
 package admin
 
 import (
+	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/middleware"
-	"PJS_Exchange/singletons/postgresApp"
 	"PJS_Exchange/template"
-	"context"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -43,8 +42,7 @@ func (sr *SymbolRouter) RegisterRoutes(router fiber.Router) {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol [get]
 func (sr *SymbolRouter) symbolList(c *fiber.Ctx) error {
-	ctx := context.Background()
-	symbols, err := postgresApp.Get().SymbolRepo().GetSymbols(ctx)
+	symbols, err := postgresApp.Get().SymbolRepo().GetSymbols(c.Context())
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to fetch symbols: "+err.Error())
 	}
@@ -65,13 +63,12 @@ func (sr *SymbolRouter) symbolList(c *fiber.Ctx) error {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol/{symbol} [get]
 func (sr *SymbolRouter) symbolDetail(c *fiber.Ctx) error {
-	ctx := context.Background()
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
 	}
 
-	symbol, err := postgresApp.Get().SymbolRepo().GetSymbolData(ctx, symbolParam)
+	symbol, err := postgresApp.Get().SymbolRepo().GetSymbolData(c.Context(), symbolParam)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to fetch symbol: "+err.Error())
 	}
@@ -103,14 +100,17 @@ func (sr *SymbolRouter) symbolListing(c *fiber.Ctx) error {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
+	if postgresql.IsSymbolStructComplete(&req.Symbol) == false {
+		return template.ErrorHandler(c, fiber.StatusBadRequest, "All fields are required")
+	}
+
 	// 요청 값과 상관없이 강제로 상태를 비활성화로 설정
 	req.Status = postgresql.Status{
 		Status: postgresql.StatusInit,
 		Reason: "",
 	}
 
-	ctx := context.Background()
-	symbol, err := postgresApp.Get().SymbolRepo().SymbolListing(ctx, &req.Symbol)
+	symbol, err := postgresApp.Get().SymbolRepo().SymbolListing(c.Context(), &req.Symbol)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to list symbol: "+err.Error())
 	}
@@ -129,13 +129,12 @@ func (sr *SymbolRouter) symbolListing(c *fiber.Ctx) error {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol/{symbol}/status/inactivate [patch]
 func (sr *SymbolRouter) readyTradeSymbol(c *fiber.Ctx) error {
-	ctx := context.Background()
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
 	}
 
-	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(ctx, symbolParam, postgresql.Status{
+	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(c.Context(), symbolParam, postgresql.Status{
 		Status: postgresql.StatusInactive,
 		Reason: "",
 	})
@@ -159,13 +158,12 @@ func (sr *SymbolRouter) readyTradeSymbol(c *fiber.Ctx) error {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol/{symbol}/status/activate [patch]
 func (sr *SymbolRouter) enableTradeSymbol(c *fiber.Ctx) error {
-	ctx := context.Background()
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
 	}
 
-	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(ctx, symbolParam, postgresql.Status{
+	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(c.Context(), symbolParam, postgresql.Status{
 		Status: postgresql.StatusActive,
 		Reason: "",
 	})
@@ -190,14 +188,13 @@ func (sr *SymbolRouter) enableTradeSymbol(c *fiber.Ctx) error {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol/{symbol}/status/suspend [patch]
 func (sr *SymbolRouter) disableTradeSymbol(c *fiber.Ctx) error {
-	ctx := context.Background()
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
 	}
 	reasonHeader := c.GetRespHeader("reason", "")
 
-	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(ctx, symbolParam, postgresql.Status{
+	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(c.Context(), symbolParam, postgresql.Status{
 		Status: postgresql.StatusSuspended,
 		Reason: reasonHeader,
 	})
@@ -223,14 +220,13 @@ func (sr *SymbolRouter) disableTradeSymbol(c *fiber.Ctx) error {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol/{symbol} [delete]
 func (sr *SymbolRouter) symbolDelisting(c *fiber.Ctx) error {
-	ctx := context.Background()
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
 	}
 	reasonHeader := c.GetRespHeader("reason", "")
 
-	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(ctx, symbolParam, postgresql.Status{
+	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(c.Context(), symbolParam, postgresql.Status{
 		Status: postgresql.StatusDelisted,
 		Reason: reasonHeader,
 	})
@@ -256,7 +252,6 @@ func (sr *SymbolRouter) symbolDelisting(c *fiber.Ctx) error {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol/{symbol}/tick-size [patch]
 func (sr *SymbolRouter) setTickSizeSymbol(c *fiber.Ctx) error {
-	ctx := context.Background()
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
@@ -270,7 +265,7 @@ func (sr *SymbolRouter) setTickSizeSymbol(c *fiber.Ctx) error {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid tick_size value")
 	}
 
-	err = postgresApp.Get().SymbolRepo().SetTickSize(ctx, symbolParam, float32(tickSize))
+	err = postgresApp.Get().SymbolRepo().SetTickSize(c.Context(), symbolParam, float32(tickSize))
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to update tick size: "+err.Error())
 	}
@@ -293,7 +288,6 @@ func (sr *SymbolRouter) setTickSizeSymbol(c *fiber.Ctx) error {
 // @Failure		401						{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/admin/symbol/{symbol}/minimum-order-quantity [patch]
 func (sr *SymbolRouter) setMinimumOrderQuantitySymbol(c *fiber.Ctx) error {
-	ctx := context.Background()
 	symbolParam := c.Params("symbol")
 	if symbolParam == "" {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
@@ -307,7 +301,7 @@ func (sr *SymbolRouter) setMinimumOrderQuantitySymbol(c *fiber.Ctx) error {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid minimum_order_quantity value")
 	}
 
-	err = postgresApp.Get().SymbolRepo().SetMinimumOrderQuantity(ctx, symbolParam, float32(minOrderQty))
+	err = postgresApp.Get().SymbolRepo().SetMinimumOrderQuantity(c.Context(), symbolParam, float32(minOrderQty))
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to update minimum order quantity: "+err.Error())
 	}

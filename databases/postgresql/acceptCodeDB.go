@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -53,7 +54,7 @@ func (r *AcceptCodeDBRepository) CreateAcceptCodesTable(ctx context.Context) err
 
 	_, err := r.db.GetPool().Exec(ctx, query)
 	if err != nil {
-		fmt.Println("Failed to create users table:", err)
+		log.Println("Failed to create users table:", err)
 		return err
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 )
@@ -358,7 +359,7 @@ func (r *APIKeyDBRepository) AuthenticateAPIKey(ctx context.Context, apiKey stri
 			// 마지막 사용 시간 업데이트 (비동기)
 			go func() {
 				if err := r.UpdateLastUsed(context.Background(), key.ID); err != nil {
-					fmt.Printf("마지막 사용 시간 업데이트 실패: %v\n", err)
+					log.Printf("마지막 사용 시간 업데이트 실패: %v\n", err)
 				}
 			}()
 			return &key, nil
@@ -601,4 +602,62 @@ func (r *APIKeyDBRepository) IsFullAdmin(key *APIKey) bool {
 // HasAnyAdminScope 관리자 스코프 중 하나라도 있는지 확인
 func (r *APIKeyDBRepository) HasAnyAdminScope(key *APIKey) bool {
 	return key.Scopes.AdminAPIKeyManage || key.Scopes.AdminUserManage || key.Scopes.AdminSystemRead || key.Scopes.AdminSystemWrite || key.Scopes.AdminSymbolManage
+}
+
+// 프리셋 스코프
+
+func FullAdminScopes() APIKeyScope {
+	return APIKeyScope{
+		MarketDataRead:    true,
+		MarketHistoryRead: true,
+		MarketSymbolRead:  true,
+		RawDataRead:       true,
+		OrderRead:         true,
+		OrderCreate:       true,
+		OrderCancel:       true,
+		OrderModify:       true,
+		OrderNotify:       true,
+		AdminAPIKeyManage: true,
+		AdminUserManage:   true,
+		AdminSymbolManage: true,
+		AdminSystemRead:   true,
+		AdminSystemWrite:  true,
+		APIKeyRead:        true,
+		APIKeyWrite:       true,
+	}
+}
+
+func AdminReadOnlyScopes() APIKeyScope {
+	return APIKeyScope{
+		MarketDataRead:    true,
+		MarketHistoryRead: true,
+		MarketSymbolRead:  true,
+		RawDataRead:       true,
+		OrderRead:         true,
+		OrderNotify:       true,
+		AdminAPIKeyManage: true,
+		AdminUserManage:   true,
+		AdminSymbolManage: true,
+		AdminSystemRead:   true,
+		APIKeyRead:        true,
+	}
+}
+
+func PresetReadOnlyScopes() APIKeyScope {
+	return APIKeyScope{
+		MarketDataRead:    true,
+		MarketHistoryRead: true,
+		MarketSymbolRead:  true,
+		RawDataRead:       true,
+		OrderRead:         true,
+		OrderNotify:       true,
+		APIKeyRead:        true,
+	}
+}
+
+func APIKeyReadWriteScopes() APIKeyScope {
+	return APIKeyScope{
+		APIKeyRead:  true,
+		APIKeyWrite: true,
+	}
 }

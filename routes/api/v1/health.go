@@ -1,8 +1,7 @@
 package v1
 
 import (
-	"PJS_Exchange/singletons/postgresApp"
-	"context"
+	"PJS_Exchange/app/postgresApp"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -40,10 +39,9 @@ func (hr *HealthRouter) RegisterRoutes(router fiber.Router) {
 //
 // @Router			/api/v1/health [get]
 func (hr *HealthRouter) healthGet(c *fiber.Ctx) error {
-	ctx := context.Background()
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"Web Working": true,
-		"DB1 Working": postgresApp.Get().DB.Ping(ctx) == nil,
+		"DB1 Working": postgresApp.Get().DB.Ping(c.Context()) == nil,
 		"time":        time.Now().Format(time.RFC3339),
 	})
 }

@@ -1,11 +1,10 @@
 package admin
 
 import (
+	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/middleware"
-	"PJS_Exchange/singletons/postgresApp"
 	"PJS_Exchange/template"
-	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -52,8 +51,7 @@ func (ar *ActivationRouter) activation(c *fiber.Ctx) error {
 		return template.ErrorHandler(c, fiber.StatusForbidden, "Only the primary admin can perform this action")
 	}
 
-	ctx := context.Background()
-	err := postgresApp.Get().UserRepo().EnableUser(ctx, user.ID)
+	err := postgresApp.Get().UserRepo().EnableUser(c.Context(), user.ID)
 	if err != nil {
 		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to activate user: "+err.Error())
 	}
