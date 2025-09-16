@@ -34,6 +34,12 @@ func main() {
 	st := postgresApp.Get()
 	defer st.Close()
 
+	// 거래 처리 시스템 초기화
+	exo := exchanges.NewProcessOrders()
+	go exo.Create()
+	defer exo.Destroy()
+	exchanges.OP = exo
+
 	// Redis 초기화
 	redisClient := databases.NewRedisClient()
 	defer func(redisClient *databases.RedisClient) {

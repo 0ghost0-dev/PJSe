@@ -3,7 +3,7 @@ package admin
 import (
 	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middleware"
+	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"time"
 
@@ -13,7 +13,7 @@ import (
 type UserRouter struct{}
 
 func (ur *UserRouter) RegisterRoutes(router fiber.Router) {
-	adminUserGroup := router.Group("/users", middleware.AuthAPIKeyMiddlewareRequireScopes(middleware.AuthConfig{
+	adminUserGroup := router.Group("/users", auth.APIKeyMiddlewareRequireScopes(auth.Config{
 		Bypass: false,
 	}, postgresql.APIKeyScope{
 		AdminUserManage: true,

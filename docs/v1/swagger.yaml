@@ -73,7 +73,7 @@ definitions:
       quantity:
         type: integer
       type:
-        description: e.g., "limit", "market", "stop-limit"
+        description: e.g., "limit", "market"
         type: string
     type: object
   template.ModifyOrderRequest:
@@ -85,7 +85,7 @@ definitions:
       quantity:
         type: integer
       type:
-        description: e.g., "limit", "market", "stop-limit"
+        description: e.g., "limit", "market"
         type: string
     type: object
 host: localhost:4000
@@ -218,7 +218,7 @@ paths:
     delete:
       description: 심볼을 상장 폐지 상태로 변경합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -265,7 +265,7 @@ paths:
     get:
       description: 특정 심볼의 정보를 반환합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -309,7 +309,7 @@ paths:
     patch:
       description: 심볼의 최소 주문 수량을 설정합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -357,7 +357,7 @@ paths:
     patch:
       description: 심볼을 거래 활성화 상태로 변경합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -401,7 +401,7 @@ paths:
     patch:
       description: 심볼을 거래 준비 완료 상태로 변경합니다. (비활성화 상태로 설정)
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -445,7 +445,7 @@ paths:
     patch:
       description: 심볼을 거래 비활성화 상태로 변경합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -493,7 +493,7 @@ paths:
     patch:
       description: 심볼의 틱 사이즈를 설정합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -893,7 +893,7 @@ paths:
       - application/json
       description: 사용자의 모든 주문을 조회합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -935,6 +935,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "503":
+          description: 장이 닫혔을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 주문 조회
       tags:
       - Orders
@@ -944,7 +950,7 @@ paths:
       - application/json
       description: 기존 매수 주문을 취소합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -993,6 +999,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "503":
+          description: 장이 닫혔을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 매수 주문 취소
       tags:
       - Orders
@@ -1001,7 +1013,7 @@ paths:
       - application/json
       description: 기존 매수 주문을 수정합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -1050,6 +1062,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "503":
+          description: 장이 닫혔을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 매수 주문 수정
       tags:
       - Orders
@@ -1058,7 +1076,7 @@ paths:
       - application/json
       description: 지정가, 시장가 주문을 접수합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -1107,6 +1125,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "503":
+          description: 장이 닫혔을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 매수 주문
       tags:
       - Orders
@@ -1116,7 +1140,7 @@ paths:
       - application/json
       description: 기존 매도 주문을 취소합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -1165,6 +1189,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "503":
+          description: 장이 닫혔을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 매도 주문 취소
       tags:
       - Orders
@@ -1173,7 +1203,7 @@ paths:
       - application/json
       description: 기존 매도 주문을 수정합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -1222,7 +1252,76 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "503":
+          description: 장이 닫혔을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 매도 주문 수정
+      tags:
+      - Orders
+    post:
+      consumes:
+      - application/json
+      description: 지정가, 시장가 주문을 접수합니다.
+      parameters:
+      - description: '심볼 (예: NVDA)'
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 주문 정보
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/template.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 주문이 성공적으로 접수되었음을 알리는 메시지
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 잘못된 요청 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 인증 실패 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 심볼을 찾을 수 없을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류 발생 시 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: 장이 닫혔을 때 에러 메시지 반환
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 매도 주문
       tags:
       - Orders
   /api/v1/market/status:
@@ -1305,7 +1404,7 @@ paths:
     get:
       description: 특정 심볼의 정보를 반환합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -1349,7 +1448,7 @@ paths:
     get:
       description: 특정 심볼의 현재가 정보를 반환합니다.
       parameters:
-      - description: '심볼 (예: AAPL)'
+      - description: '심볼 (예: NVDA)'
         in: path
         name: symbol
         required: true
@@ -1397,6 +1496,11 @@ paths:
         in: query
         name: since
         type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -1433,6 +1537,11 @@ paths:
         in: query
         name: since
         type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -1468,6 +1577,11 @@ paths:
       - description: 특정 타임스탬프 이후의 데이터를 받기 위한 옵션 (0을 입력하면 오늘 발생한 전체 데이터 수신)
         in: query
         name: since
+        type: string
+      - description: Bearer {API_KEY}
+        in: header
+        name: Authorization
+        required: true
         type: string
       produces:
       - application/json

@@ -2,25 +2,46 @@ package template
 
 /* Market/Order Types */
 
+var (
+	OrderTypeLimit        = "limit"
+	OrderTypeMarket       = "market"
+	SideBuy               = "buy"
+	SideSell              = "sell"
+	StatusOpen            = "open"
+	StatusModified        = "modified"
+	StatusPartiallyFilled = "partially_filled"
+	StatusFilled          = "filled"
+	StatusCanceled        = "canceled"
+	StatusError           = "error"
+)
+
 type OrderStatus struct {
 	OrderID   string  `json:"order_id"`
 	Side      string  `json:"side"` // "buy" or "sell"
-	OrderType string  `json:"type"` // e.g., "limit", "market", "stop-limit"
+	OrderType string  `json:"type"` // e.g., "limit", "market"
 	Price     float64 `json:"price"`
 	Quantity  int     `json:"quantity"`
 }
 
 type OrderRequest struct {
-	Timestamp int64   `json:"timestamp"` // on Server side, ignore client input
-	UserID    int     `json:"user_id"`   // on Server side, ignore client input
-	OrderID   string  `json:"order_id"`  // on Server side, ignore client input
-	Symbol    string  `json:"symbol"`    // on Server side, ignore client input
-	Status    string  `json:"status"`    // on Server side, ignore client input
-	Side      string  `json:"side"`      // on Server side, ignore client input
-	OrderType string  `json:"type"`      // e.g., "limit", "market", "stop-limit"
-	Price     float64 `json:"price"`
-	Quantity  int     `json:"quantity"`
+	UserID     int         `json:"user_id"` // on Server side, ignore client input
+	OrderID    string      `json:"order_id"`
+	Symbol     string      `json:"symbol"` // on Server side, ignore client input
+	Status     string      `json:"status"` // on Server side, ignore client input
+	Side       string      `json:"side"`   // on Server side, ignore client input
+	OrderType  string      `json:"type"`   // e.g., "limit", "market"
+	Price      float64     `json:"price"`
+	Quantity   int         `json:"quantity"`
+	ResultChan chan Result `json:"-"` // for server to send back result
 }
+
+type Result struct {
+	Timestamp int64  `json:"timestamp"`
+	Success   bool   `json:"success"`
+	Message   string `json:"message"`
+	Code      int    `json:"code"`
+}
+
 type UpdateDepth struct {
 	Timestamp int64   `json:"timestamp"` // on Server side, ignore client input
 	Symbol    string  `json:"symbol"`
@@ -32,14 +53,14 @@ type UpdateDepth struct {
 // Template Only Structs Below
 
 type CreateOrderRequest struct {
-	OrderType string  `json:"type"` // e.g., "limit", "market", "stop-limit"
+	OrderType string  `json:"type"` // e.g., "limit", "market"
 	Price     float64 `json:"price"`
 	Quantity  int     `json:"quantity"`
 }
 
 type ModifyOrderRequest struct {
 	OrderID   string  `json:"order_id"`
-	OrderType string  `json:"type"` // e.g., "limit", "market", "stop-limit"
+	OrderType string  `json:"type"` // e.g., "limit", "market"
 	Price     float64 `json:"price"`
 	Quantity  int     `json:"quantity"`
 }
@@ -67,6 +88,7 @@ type MarketDepth struct {
 
 type Ledger struct {
 	Timestamp int64   `json:"timestamp"`
+	Symbol    string  `json:"symbol"`
 	Price     float64 `json:"price"`
 	Volume    int     `json:"volume"`
 }

@@ -3,7 +3,7 @@ package admin
 import (
 	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middleware"
+	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"strconv"
 
@@ -13,7 +13,7 @@ import (
 type SymbolRouter struct{}
 
 func (sr *SymbolRouter) RegisterRoutes(router fiber.Router) {
-	adminSymbolGroup := router.Group("/symbols", middleware.AuthAPIKeyMiddlewareRequireScopes(middleware.AuthConfig{
+	adminSymbolGroup := router.Group("/symbols", auth.APIKeyMiddlewareRequireScopes(auth.Config{
 		Bypass: false,
 	}, postgresql.APIKeyScope{
 		AdminSymbolManage: true,
@@ -55,7 +55,7 @@ func (sr *SymbolRouter) symbolList(c *fiber.Ctx) error {
 // @Description	특정 심볼의 정보를 반환합니다.
 // @Tags			Admin - Symbol
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200				{object}	map[string]postgresql.Symbol	"성공 시 심볼 상세 정보 반환"
 // @Failure		404				{object}	map[string]string	"심볼을 찾을 수 없을 때 에러 메시지 반환"
@@ -121,7 +121,7 @@ func (sr *SymbolRouter) symbolListing(c *fiber.Ctx) error {
 // @Description	심볼을 거래 준비 완료 상태로 변경합니다. (비활성화 상태로 설정)
 // @Tags			Admin - Symbol
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200				{object}	map[string]string	"성공 시 상태 변경 메시지 반환"
 // @Failure		400				{object}	map[string]string	"잘못된 요청 시 에러 메시지 반환"
@@ -150,7 +150,7 @@ func (sr *SymbolRouter) readyTradeSymbol(c *fiber.Ctx) error {
 // @Description	심볼을 거래 활성화 상태로 변경합니다.
 // @Tags			Admin - Symbol
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200				{object}	map[string]string	"성공 시 상태 변경 메시지 반환"
 // @Failure		400				{object}	map[string]string	"잘못된 요청 시 에러 메시지 반환"
@@ -179,7 +179,7 @@ func (sr *SymbolRouter) enableTradeSymbol(c *fiber.Ctx) error {
 // @Description	심볼을 거래 비활성화 상태로 변경합니다.
 // @Tags			Admin - Symbol
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			reason			header		string				false	"비활성화 사유"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200				{object}	map[string]string	"성공 시 상태 변경 메시지 반환"
@@ -211,7 +211,7 @@ func (sr *SymbolRouter) disableTradeSymbol(c *fiber.Ctx) error {
 // @Description	심볼을 상장 폐지 상태로 변경합니다.
 // @Tags			Admin - Symbol
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			reason			header		string				false	"상장 폐지 사유"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200				{object}	map[string]string	"성공 시 상장 폐지 메시지 반환"
@@ -243,7 +243,7 @@ func (sr *SymbolRouter) symbolDelisting(c *fiber.Ctx) error {
 // @Description	심볼의 틱 사이즈를 설정합니다.
 // @Tags			Admin - Symbol
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			tick_size		query		number				true	"틱 사이즈 (예: 0.01)"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200				{object}	map[string]interface{}	"성공 시 틱 사이즈 변경 메시지 반환"
@@ -279,7 +279,7 @@ func (sr *SymbolRouter) setTickSizeSymbol(c *fiber.Ctx) error {
 // @Description	심볼의 최소 주문 수량을 설정합니다.
 // @Tags			Admin - Symbol
 // @Produce		json
-// @Param			symbol					path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol					path		string				true	"심볼 (예: NVDA)"
 // @Param			minimum_order_quantity	query		number				true	"최소 주문 수량 (예: 1)"
 // @Param			Authorization			header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200						{object}	map[string]interface{}	"성공 시 최소 주문 수량 변경 메시지 반환"

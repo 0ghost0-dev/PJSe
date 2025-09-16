@@ -3,7 +3,7 @@ package market
 import (
 	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middleware"
+	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"time"
 
@@ -24,7 +24,7 @@ func (sr *SymbolsRouter) RegisterRoutes(router fiber.Router) {
 				fiber.StatusTooManyRequests,
 				"Too many requests. Please try again later.")
 		},
-	}), middleware.AuthAPIKeyMiddlewareRequireScopes(middleware.AuthConfig{Bypass: false}, postgresql.APIKeyScope{
+	}), auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 		MarketSymbolRead: true,
 	}))
 
@@ -66,7 +66,7 @@ func (sr *SymbolsRouter) symbolList(c *fiber.Ctx) error {
 // @Description	특정 심볼의 정보를 반환합니다.
 // @Tags			Market - Status
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"
 // @Success		200				{object}	map[string]postgresql.Symbol	"성공 시 심볼 상세 정보 반환"
 // @Failure		404				{object}	map[string]string	"심볼을 찾을 수 없을 때 에러 메시지 반환"
@@ -99,7 +99,7 @@ func (sr *SymbolsRouter) symbolDetail(c *fiber.Ctx) error {
 // @Description	특정 심볼의 현재가 정보를 반환합니다.
 // @Tags			Market - Status
 // @Produce		json
-// @Param			symbol			path		string				true	"심볼 (예: AAPL)"
+// @Param			symbol			path		string				true	"심볼 (예: NVDA)"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"
 // @Success		200				{object}	map[string]string	"성공 시 심볼 현재가 정보 반환"
 // @Failure		404				{object}	map[string]string	"심볼을 찾을 수 없을 때 에러 메시지 반환"

@@ -207,7 +207,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -271,7 +271,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -343,7 +343,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -414,7 +414,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -480,7 +480,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -546,7 +546,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -618,7 +618,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1217,7 +1217,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1273,6 +1273,15 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "503": {
+                        "description": "장이 닫혔을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -1293,7 +1302,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1360,6 +1369,15 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "503": {
+                        "description": "장이 닫혔을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -1378,7 +1396,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1439,6 +1457,15 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "장이 닫혔을 때 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1463,7 +1490,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1530,11 +1557,114 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "503": {
+                        "description": "장이 닫혔을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
         "/api/v1/market/orders/{symbol}/sell": {
+            "post": {
+                "description": "지정가, 시장가 주문을 접수합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "매도 주문",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: NVDA)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "주문 정보",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/template.CreateOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "주문이 성공적으로 접수되었음을 알리는 메시지",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "장이 닫혔을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "기존 매도 주문을 취소합니다.",
                 "consumes": [
@@ -1550,7 +1680,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1617,6 +1747,15 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "503": {
+                        "description": "장이 닫혔을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -1635,7 +1774,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1696,6 +1835,15 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "장이 닫혔을 때 에러 메시지 반환",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1834,7 +1982,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1900,7 +2048,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "심볼 (예: AAPL)",
+                        "description": "심볼 (예: NVDA)",
                         "name": "symbol",
                         "in": "path",
                         "required": true
@@ -1969,6 +2117,13 @@ const docTemplate = `{
                         "description": "특정 타임스탬프 이후의 데이터를 받기 위한 옵션 (0을 입력하면 오늘 발생한 전체 데이터 수신)",
                         "name": "since",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2024,6 +2179,13 @@ const docTemplate = `{
                         "description": "특정 타임스탬프 이후의 데이터를 받기 위한 옵션 (0을 입력하면 오늘 발생한 전체 데이터 수신)",
                         "name": "since",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2079,6 +2241,13 @@ const docTemplate = `{
                         "description": "특정 타임스탬프 이후의 데이터를 받기 위한 옵션 (0을 입력하면 오늘 발생한 전체 데이터 수신)",
                         "name": "since",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2229,7 +2398,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "description": "e.g., \"limit\", \"market\", \"stop-limit\"",
+                    "description": "e.g., \"limit\", \"market\"",
                     "type": "string"
                 }
             }
@@ -2247,7 +2416,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "description": "e.g., \"limit\", \"market\", \"stop-limit\"",
+                    "description": "e.g., \"limit\", \"market\"",
                     "type": "string"
                 }
             }

@@ -3,7 +3,7 @@ package admin
 import (
 	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middleware"
+	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"time"
 
@@ -14,7 +14,7 @@ import (
 type ActivationRouter struct{}
 
 func (ar *ActivationRouter) RegisterRoutes(router fiber.Router) {
-	activationGroup := router.Group("/activation", middleware.AuthMiddleware(middleware.AuthConfig{Bypass: true}))
+	activationGroup := router.Group("/activation", auth.LoginMiddleware(auth.Config{Bypass: true}))
 
 	activationGroup.Use(limiter.New(limiter.Config{
 		Max:        2, // 최대 요청 수

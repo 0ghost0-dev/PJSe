@@ -1,4 +1,4 @@
-package middleware
+package auth
 
 import (
 	"PJS_Exchange/app/postgresApp"
@@ -11,11 +11,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type AuthConfig struct {
+type Config struct {
 	Bypass bool // 활성화되지 않은 계정도 통과시키는 옵션
 }
 
-func AuthMiddleware(config AuthConfig) fiber.Handler {
+func LoginMiddleware(config Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		auth := c.Get("Authorization")
 
@@ -87,7 +87,7 @@ func AuthMiddleware(config AuthConfig) fiber.Handler {
 	}
 }
 
-func AuthAPIKeyMiddleware(config AuthConfig) fiber.Handler {
+func APIKeyMiddleware(config Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Bearer 토큰 인증
 		auth := c.Get("Authorization")
@@ -147,7 +147,7 @@ func AuthAPIKeyMiddleware(config AuthConfig) fiber.Handler {
 	}
 }
 
-func AuthAPIKeyMiddlewareRequireScopes(config AuthConfig, requireScopes postgresql.APIKeyScope) fiber.Handler {
+func APIKeyMiddlewareRequireScopes(config Config, requireScopes postgresql.APIKeyScope) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Bearer 토큰 인증
 		auth := c.Get("Authorization")
@@ -187,7 +187,13 @@ func AuthAPIKeyMiddlewareRequireScopes(config AuthConfig, requireScopes postgres
 
 		// 인증 성공, 다음 미들웨어 또는 핸들러로 진행
 		c.Locals("apiKey", apiKey)
-		c.Locals("user", user)
+		c.Locals("user", &user)
+
+		//user := postgresql.User{ // 테스트용
+		//	ID:       1,
+		//	Username: "testuser",
+		//}
+		//c.Locals("user", &user)
 
 		return c.Next()
 	}

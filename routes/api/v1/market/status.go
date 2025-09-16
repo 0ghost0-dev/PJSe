@@ -2,7 +2,7 @@ package market
 
 import (
 	"PJS_Exchange/exchanges"
-	"PJS_Exchange/middleware"
+	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"time"
 
@@ -23,7 +23,7 @@ func (sr *StatusRouter) RegisterRoutes(router fiber.Router) {
 				fiber.StatusTooManyRequests,
 				"Too many requests. Please try again later.")
 		},
-	}), middleware.AuthAPIKeyMiddleware(middleware.AuthConfig{Bypass: false}))
+	}), auth.APIKeyMiddleware(auth.Config{Bypass: false}))
 
 	statusGroup.Get("/", sr.getExchangeData)
 	statusGroup.Get("/session", sr.getSession)

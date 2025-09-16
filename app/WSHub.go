@@ -14,7 +14,7 @@ type Client struct {
 	Username    string
 	Data        map[string]interface{} // Additional data if needed
 	Conn        *websocket.Conn
-	syncing     bool
+	Syncing     bool
 	syncLock    sync.Mutex
 	pendingMsgs []PendingMessage
 }
@@ -26,9 +26,10 @@ type PendingMessage struct {
 }
 
 type WSHub struct {
-	clients  sync.Map
-	messages []Message
-	lock     sync.Mutex
+	clients           sync.Map
+	messages          []Message
+	lock              sync.Mutex
+	AllowMultiConnect bool // true: 여러개 허용, false: 한개만 허용
 }
 
 type Message struct {
@@ -37,14 +38,28 @@ type Message struct {
 	Data      []byte
 }
 
-func NewWSHub() *WSHub {
-	return &WSHub{}
+func NewWSHub(multiConnection bool) *WSHub {
+	return &WSHub{
+		AllowMultiConnect: multiConnection,
+	}
 }
 
 func (hub *WSHub) RegisterClient(client *Client) {
 	conns, _ := hub.clients.LoadOrStore(client.ID, &sync.Map{})
-
 	connMap := conns.(*sync.Map)
+
+	if !hub.AllowMultiConnect {
+		// 기존 연결 모두 끊기
+		connMap.Range(func(_, v interface{}) bool {
+			oldClient := v.(*Client)
+			err := oldClient.Conn.Close()
+			if err != nil {
+				return false
+			}
+			connMap.Delete(oldClient.ConnID)
+			return true
+		})
+	}
 	connMap.Store(client.ConnID, client)
 }
 
@@ -90,7 +105,7 @@ func (hub *WSHub) BroadcastMessage(timestamp int64, messageType int, message []b
 
 			// 동기화 중인 클라이언트는 메시지를 버퍼에 저장
 			client.syncLock.Lock()
-			if client.syncing {
+			if client.Syncing {
 				client.pendingMsgs = append(client.pendingMsgs, PendingMessage{
 					ID:          0,
 					MessageType: messageType,
@@ -133,7 +148,7 @@ func (hub *WSHub) SendMessageToUser(userID int, timestamp int64, messageType int
 
 			// 동기화 중인 클라이언트는 메시지를 버퍼에 저장
 			client.syncLock.Lock()
-			if client.syncing {
+			if client.Syncing {
 				client.pendingMsgs = append(client.pendingMsgs, PendingMessage{
 					ID:          userID,
 					MessageType: messageType,
@@ -161,12 +176,12 @@ func (hub *WSHub) SendMessageToUser(userID int, timestamp int64, messageType int
 
 func (hub *WSHub) SendMessageToUserSince(client *Client, since string) {
 	client.syncLock.Lock()
-	client.syncing = true
+	client.Syncing = true
 	client.syncLock.Unlock()
 
 	defer func() {
 		client.syncLock.Lock()
-		client.syncing = false
+		client.Syncing = false
 		client.syncLock.Unlock()
 	}()
 
@@ -195,7 +210,7 @@ func (hub *WSHub) SendMessageToUserSince(client *Client, since string) {
 
 	defer func() {
 		client.syncLock.Lock()
-		client.syncing = false
+		client.Syncing = false
 
 		// 동기화 중 대기된 메시지들 전송
 		for _, pendingMsg := range client.pendingMsgs {

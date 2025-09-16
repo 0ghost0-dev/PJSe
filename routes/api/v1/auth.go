@@ -3,7 +3,7 @@ package v1
 import (
 	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middleware"
+	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"PJS_Exchange/utils"
 	"log"
@@ -30,10 +30,10 @@ func (ar *AuthRouter) RegisterRoutes(router fiber.Router) {
 		},
 	}))
 
-	authGroup.Get("/", middleware.AuthMiddleware(middleware.AuthConfig{Bypass: false}), ar.authTest)
+	authGroup.Get("/", auth.LoginMiddleware(auth.Config{Bypass: false}), ar.authTest)
 	authGroup.Post("/", ar.registerUser)
-	authGroup.Get("/api", middleware.AuthAPIKeyMiddleware(middleware.AuthConfig{Bypass: false}), ar.getAPIKeyDetails)
-	authGroup.Post("/token", middleware.AuthMiddleware(middleware.AuthConfig{Bypass: false}), ar.generateTempAPIKey)
+	authGroup.Get("/api", auth.APIKeyMiddleware(auth.Config{Bypass: false}), ar.getAPIKeyDetails)
+	authGroup.Post("/token", auth.LoginMiddleware(auth.Config{Bypass: false}), ar.generateTempAPIKey)
 }
 
 // === 핸들러 함수들 ===
