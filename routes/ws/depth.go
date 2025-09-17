@@ -20,7 +20,7 @@ var (
 	DepthHub               = app.NewWSHub(false)
 	TempDepth              = make(map[string]template.MarketDepth)                // 심볼별 임시 호가 데이터 저장용 (예: "NVDA" : {Bids: [...], Asks: [...]})
 	TempDepthOrderIDIndex  = make(map[string]map[string][]interface{})            // 심볼별 주문 ID 인덱스 (예: "NVDA" : {"orderID1": [1, "bid", 123.45, 10, 1], "orderID2": [2, "ask", 678.90, 20, 1]}
-	TempDepthPriceOrder    = make(map[string]map[string]map[float64]*utils.Queue) // 심볼별 가격대별 주문 순서 ID 리스트 (예: "NVDA" : {"bids": {123.45: ["orderID1", "orderID3"], 678.90: ["orderID2"]}, "asks": {123.45: ["orderID4"], 678.90: ["orderID5", "orderID6"]}})
+	TempDepthExecutionSeq  = make(map[string]map[string]map[float64]*utils.Queue) // 심볼별 가격대별 주문 순서 ID 리스트 (예: "NVDA" : {"bids": {123.45: ["orderID1", "orderID3"], 678.90: ["orderID2"]}, "asks": {123.45: ["orderID4"], 678.90: ["orderID5", "orderID6"]}})
 	TempBidAskOverlapCheck = make(map[string]*btree.BTree)                        // 심볼별 매수/매도 가격 중복 체크용 (예: "NVDA" : btree.BTree{}
 )
 

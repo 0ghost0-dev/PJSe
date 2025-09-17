@@ -4,7 +4,7 @@ import (
 	"PJS_Exchange/app"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/middlewares/auth"
-	"PJS_Exchange/template"
+	"PJS_Exchange/utils"
 	"context"
 	"log"
 	"time"
@@ -16,7 +16,7 @@ import (
 
 var (
 	LedgerHub  = app.NewWSHub(false)
-	TempLedger = make(map[string][]template.Ledger) // 심볼별 임시 원장 데이터 저장용 (예: "NVDA" : [{Timestamp: ..., Price: ..., Volume: ...}, ...])
+	TempLedger = make(map[string]*utils.Queue) // 심볼별 임시 원장 데이터 저장용 (예: "NVDA" : [{Timestamp: ..., Price: ..., Volume: ...}, ...])
 )
 
 type LedgerRouter struct{}

@@ -12,6 +12,10 @@ func NewQueue() *Queue {
 	}
 }
 
+func (q *Queue) PushFront(item interface{}) {
+	q.items.PushFront(item) // O(1)
+}
+
 func (q *Queue) Enqueue(item interface{}) {
 	q.items.PushBack(item) // O(1)
 }
@@ -34,8 +38,28 @@ func (q *Queue) RemoveValue(targetValue interface{}) bool {
 	return false
 }
 
+func (q *Queue) GetFront() interface{} {
+	front := q.items.Front()
+	if front != nil {
+		return front.Value
+	}
+	return nil
+}
+
+func (q *Queue) Has(targetValue interface{}, delete bool) bool {
+	for e := q.items.Front(); e != nil; e = e.Next() {
+		if e.Value == targetValue {
+			if delete {
+				q.items.Remove(e)
+			}
+			return true
+		}
+	}
+	return false
+}
+
 func (q *Queue) IsEmpty() bool {
-	return q.items.Len() == 0
+	return q.items == nil || q.items.Len() == 0
 }
 
 func (q *Queue) Size() int {

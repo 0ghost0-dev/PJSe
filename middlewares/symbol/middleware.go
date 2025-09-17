@@ -74,7 +74,7 @@ func IsTradable() fiber.Handler {
 		}
 
 		symbolData, err := postgresApp.Get().SymbolRepo().GetSymbolData(c.Context(), symbol)
-		if err != nil || symbolData.Symbol == "" {
+		if err != nil || symbolData.Status.Status == "" {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Symbol '" + symbol + "' is not listed.",
 				"code":  fiber.StatusNotFound,
@@ -91,7 +91,7 @@ func IsTradable() fiber.Handler {
 			})
 		case postgresql.StatusDelisted:
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error":  "Symbol '" + symbol + "' is delisted.",
+				"error":  "Symbol '" + symbol + "' is not listed.",
 				"reason": symbolData.Status.Reason,
 				"code":   fiber.StatusForbidden,
 			})

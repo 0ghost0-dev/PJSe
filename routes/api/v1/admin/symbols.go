@@ -4,10 +4,15 @@ import (
 	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/middlewares/auth"
+	"PJS_Exchange/routes/ws"
 	"PJS_Exchange/template"
+	"PJS_Exchange/utils"
+	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 )
 
 type SymbolRouter struct{}
@@ -151,6 +156,7 @@ func (sr *SymbolRouter) readyTradeSymbol(c *fiber.Ctx) error {
 // @Tags			Admin - Symbol
 // @Produce		json
 // @Param			symbol			path		string				true	"심볼 (예: NVDA)"
+// @Param price			header		float64				false	"상장가 ("inactive" 상태에서 "active" 상태로 변경 시에만 사용됨)"
 // @Param			Authorization	header		string				true	"Bearer {API_KEY}"	with	AdminSymbolManage	Scope
 // @Success		200				{object}	map[string]string	"성공 시 상태 변경 메시지 반환"
 // @Failure		400				{object}	map[string]string	"잘못된 요청 시 에러 메시지 반환"
@@ -163,13 +169,40 @@ func (sr *SymbolRouter) enableTradeSymbol(c *fiber.Ctx) error {
 		return template.ErrorHandler(c, fiber.StatusBadRequest, "Symbol parameter is required")
 	}
 
-	err := postgresApp.Get().SymbolRepo().UpdateSymbolStatus(c.Context(), symbolParam, postgresql.Status{
+	if c.GetRespHeader("price", "") != "" {
+		priceHeader := c.GetRespHeader("price", "")
+		price, err := strconv.ParseFloat(priceHeader, 64)
+		if err != nil || price <= 0 {
+			return template.ErrorHandler(c, fiber.StatusBadRequest, "Invalid price value")
+		}
+
+		sym, err := postgresApp.Get().SymbolRepo().GetSymbolData(c.Context(), symbolParam)
+		if err != nil {
+			return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to fetch symbol: "+err.Error())
+		}
+
+		if sym.Status.Status != postgresql.StatusInactive {
+			return template.ErrorHandler(c, fiber.StatusBadRequest, "Price can only be set when changing status from 'inactive' to 'active'")
+		}
+
+		ledger := template.Ledger{
+			Timestamp: time.Now().UnixMilli(),
+			Symbol:    symbolParam,
+			Price:     price,
+			Volume:    0,
+		}
+		send, _ := json.Marshal(ledger)
+		if ws.TempLedger[symbolParam] == nil {
+			ws.TempLedger[symbolParam] = utils.NewQueue()
+		}
+		ws.TempLedger[symbolParam].PushFront(ledger)
+		ws.LedgerHub.BroadcastMessage(time.Now().UnixMilli(), websocket.TextMessage, send)
+	}
+
+	_ = postgresApp.Get().SymbolRepo().UpdateSymbolStatus(c.Context(), symbolParam, postgresql.Status{
 		Status: postgresql.StatusActive,
 		Reason: "",
 	})
-	if err != nil {
-		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Failed to update symbol status: "+err.Error())
-	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Symbol status updated to active",
 	})

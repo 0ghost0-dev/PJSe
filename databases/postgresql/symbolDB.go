@@ -32,6 +32,7 @@ type Symbol struct {
 	MinimumOrderQuantity float32         `json:"minimum_order_quantity"`
 	TickSize             float32         `json:"tick_size"`
 	TotalStocks          int64           `json:"total_stocks"`
+	IPOPrice             float64         `json:"ipo_price,omitempty"`
 	Tags                 map[string]bool `json:"tags"`
 	Status               Status          `json:"status"`
 }
@@ -61,6 +62,7 @@ func (r *SymbolDBRepository) CreateSymbolsTable(ctx context.Context) error {
 		minimum_order_quantity REAL DEFAULT 1,
 		tick_size REAL DEFAULT 1,
 		total_stocks BIGINT DEFAULT 0,
+		ipo_price REAL DEFAULT 0,
 		tags JSONB DEFAULT '{}'::jsonb,
 		status JSONB DEFAULT '{"status": "inactive", "reason": ""}'::jsonb
 	);
@@ -89,13 +91,13 @@ func (r *SymbolDBRepository) SymbolListing(ctx context.Context, sym *Symbol) (*S
 	}
 
 	query := `
-		INSERT INTO symbols (symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO symbols (symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, ipo_price, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id`
 
 	err = r.db.GetPool().QueryRow(ctx, query,
 		sym.Symbol, sym.Name, sym.Detail, sym.Url, sym.Logo,
-		sym.Market, sym.Type, sym.MinimumOrderQuantity, sym.TickSize, sym.TotalStocks, statusJSON).Scan(&sym.ID)
+		sym.Market, sym.Type, sym.MinimumOrderQuantity, sym.TickSize, sym.TotalStocks, sym.IPOPrice, statusJSON).Scan(&sym.ID)
 
 	if err != nil {
 		return nil, err
@@ -105,7 +107,7 @@ func (r *SymbolDBRepository) SymbolListing(ctx context.Context, sym *Symbol) (*S
 }
 
 func (r *SymbolDBRepository) GetSymbols(ctx context.Context) (*[]Symbol, error) {
-	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, status FROM symbols`
+	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, ipo_price, status FROM symbols`
 	rows, err := r.db.GetPool().Query(ctx, query)
 	if err != nil {
 		return nil, err
@@ -119,7 +121,7 @@ func (r *SymbolDBRepository) GetSymbols(ctx context.Context) (*[]Symbol, error) 
 		var statusJSON []byte
 
 		err := rows.Scan(&sym.ID, &sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
-			&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &statusJSON)
+			&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &sym.IPOPrice, &statusJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -140,13 +142,13 @@ func (r *SymbolDBRepository) GetSymbols(ctx context.Context) (*[]Symbol, error) 
 }
 
 func (r *SymbolDBRepository) GetSymbolData(ctx context.Context, symbol string) (*Symbol, error) {
-	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, status FROM symbols WHERE symbol = $1`
+	query := `SELECT id, symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, ipo_price, status FROM symbols WHERE symbol = $1`
 	sym := &Symbol{}
 	var statusJSON []byte
 
 	err := r.db.GetPool().QueryRow(ctx, query, symbol).Scan(
 		&sym.ID, &sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
-		&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &statusJSON)
+		&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &sym.IPOPrice, &statusJSON)
 
 	if err != nil {
 		return nil, err
@@ -196,6 +198,22 @@ func (r *SymbolDBRepository) SumTotalStocks(ctx context.Context, symbol string, 
 	return err
 }
 
+func (r *SymbolDBRepository) GetIPOPrice(ctx context.Context, symbol string) (float64, error) {
+	var ipoPrice float64
+	query := `SELECT ipo_price FROM symbols WHERE symbol = $1`
+	err := r.db.GetPool().QueryRow(ctx, query, symbol).Scan(&ipoPrice)
+	if err != nil {
+		return 0, err
+	}
+	return ipoPrice, nil
+}
+
+func (r *SymbolDBRepository) SetIPOPrice(ctx context.Context, symbol string, ipoPrice float64) error {
+	query := `UPDATE symbols SET ipo_price = $1 WHERE symbol = $2`
+	_, err := r.db.GetPool().Exec(ctx, query, ipoPrice, symbol)
+	return err
+}
+
 // 추가 유틸리티 메서드들
 
 func IsSymbolStructComplete(sym *Symbol) bool {
@@ -208,5 +226,6 @@ func IsSymbolStructComplete(sym *Symbol) bool {
 		sym.Detail != "" &&
 		sym.Url != "" &&
 		sym.Logo != "" &&
-		sym.TotalStocks >= 0
+		sym.TotalStocks > 0 &&
+		sym.IPOPrice > 0
 }
