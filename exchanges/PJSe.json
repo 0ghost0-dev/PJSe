@@ -40,10 +40,10 @@
     "Sunday": { "open": null, "close": null }
   },
   "anniversaries": [{
-    "date" : "2024-01-01",
-    "name" : "New Year's Day",
-    "pre_market_sessions" : { "open" : null, "close" : null },
-    "regular_trading_sessions" : { "open" : null, "close" : null },
-    "post_market_sessions" : { "open" : null, "close" : null }
+    "date" : "2025-09-17",
+    "name" : "24H Testing",
+    "pre_market_sessions" : { "open" : "00:00", "close" : "01:00" },
+    "regular_trading_sessions" : { "open" : "01:00", "close" : "23:00" },
+    "post_market_sessions" : { "open" : "23:00", "close" : "00:00" }
   }]
 }

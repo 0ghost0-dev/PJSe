@@ -7,9 +7,13 @@ import (
 /* B-Tree */
 
 type Float64Item float64
+type StringItem string
 
 func (a Float64Item) Less(b btree.Item) bool {
 	return a < b.(Float64Item)
+}
+func (a StringItem) Less(b btree.Item) bool {
+	return a < b.(StringItem)
 }
 
 /* Market/Order Types */
