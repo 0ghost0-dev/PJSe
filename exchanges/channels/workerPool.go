@@ -1,13 +1,19 @@
-package exchanges
+package channels
 
 import (
 	"PJS_Exchange/app/postgresApp"
+	"PJS_Exchange/exchanges"
+	"PJS_Exchange/routes/ws"
+	"PJS_Exchange/template"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/gofiber/websocket/v2"
 )
 
 type Job struct {
@@ -28,8 +34,66 @@ func processJob(job Job) error {
 	return nil
 }
 
+// TODO 추후 protobuf로 변경
 func processGetSession() error {
-	return UpdateMarketStatus()
+	previousStatus := exchanges.MarketStatus
+
+	// 세션 상태 업데이트
+	err := exchanges.UpdateMarketStatus()
+	if err != nil {
+		return fmt.Errorf("UpdateMarketStatus error: %v", err)
+	}
+
+	// 프리장 시작 5분 전, 1분 전 알림
+	sessionTime := exchanges.GetChangeSessionTime()
+	if sessionTime == nil {
+		return nil
+	}
+
+	preF := (*sessionTime)["pre"].Add(-5 * time.Minute)
+	preO := (*sessionTime)["pre"].Add(-1 * time.Minute)
+	nowTime, _ := time.Parse("15:04", time.Now().Format("15:04"))
+
+	if nowTime.Equal(preF) {
+		sender, err := json.Marshal(template.SessionStatus{
+			Session: "pre-5m",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to marshal session status: %v", err)
+		}
+		ws.SessionHub.BroadcastMessage(time.Now().UnixMilli(), websocket.TextMessage, sender)
+	} else if nowTime.Equal(preO) {
+		sender, err := json.Marshal(template.SessionStatus{
+			Session: "pre-1m",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to marshal session status: %v", err)
+		}
+		ws.SessionHub.BroadcastMessage(time.Now().UnixMilli(), websocket.TextMessage, sender)
+	}
+
+	if previousStatus != exchanges.MarketStatus {
+		// 세션 상태가 변경된 경우에만 알림 전송
+		//log.Printf("Market status changed from %s to %s", previousStatus, MarketStatus)
+		sender, err := json.Marshal(template.SessionStatus{
+			Session: exchanges.MarketStatus,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to marshal session status: %v", err)
+		}
+		ws.SessionHub.BroadcastMessage(time.Now().UnixMilli(), websocket.TextMessage, sender)
+	}
+
+	// 장 종료 10분 후 모든 클라이언트 연결 종료 처리 (세션 WS 제외)
+	// 이전 상태가 "post"였고 현재 상태가 "closed"인 경우
+	if previousStatus == "post" && exchanges.MarketStatus == "closed" {
+		time.AfterFunc(10*time.Minute, func() {
+			ws.DepthHub.DisconnectAll()
+			ws.LedgerHub.DisconnectAll()
+			ws.NotifyHub.DisconnectAll()
+		})
+	}
+	return nil
 }
 
 func processClearExpiredAPIKeys() error {
@@ -39,12 +103,14 @@ func processClearExpiredAPIKeys() error {
 
 func processClearRedisCache() error {
 	// 프리장 시작 10분 전에 Redis 캐시 비우기
-	openedTime := getOpenedTime()
-	if openedTime == nil {
+	sessionTime := exchanges.GetChangeSessionTime()
+	if sessionTime == nil {
 		return nil
 	}
+
+	preOpen := (*sessionTime)["pre"]
 	nowTime, _ := time.Parse("15:04", time.Now().Format("15:04"))
-	if MarketStatus == "closed" && nowTime.Equal(openedTime.Add(-10*time.Minute)) {
+	if exchanges.MarketStatus == "closed" && nowTime.Equal(preOpen.Add(-10*time.Minute)) {
 		// TODO: Redis 캐시 비우기
 		return nil
 	}

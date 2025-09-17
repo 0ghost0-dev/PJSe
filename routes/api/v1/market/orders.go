@@ -1,12 +1,11 @@
 package market
 
 import (
-	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/exchanges"
+	"PJS_Exchange/exchanges/channels"
 	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/middlewares/session"
-	"PJS_Exchange/routes/ws"
+	s "PJS_Exchange/middlewares/symbol"
 	t "PJS_Exchange/template"
 	"time"
 
@@ -19,43 +18,34 @@ type OrdersRouter struct{}
 func (or *OrdersRouter) RegisterRoutes(router fiber.Router) {
 	ordersGroup := router.Group("/orders")
 
-	symbolExist := func(c *fiber.Ctx) error {
-		symbol := c.Params("sym")
-		exist, _ := postgresApp.Get().SymbolRepo().IsSymbolExist(c.Context(), symbol)
-		if !exist {
-			return fiber.NewError(fiber.StatusNotFound, "Symbol '"+symbol+"' does not exist.")
-		}
-		return c.Next()
-	}
-
 	ordersGroup.Get("/:sym",
 		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 			OrderRead: true,
-		}), session.IsOnline(), or.getOrders)
+		}), session.IsOnline(), s.IsTradable(), or.getOrders)
 	ordersGroup.Post("/:sym/buy",
 		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 			OrderCreate: true,
-		}), session.IsOnline(), symbolExist, or.buyOrder)
+		}), session.IsOnline(), s.IsTradable(), or.buyOrder)
 	ordersGroup.Patch("/:sym/buy",
 		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 			OrderModify: true,
-		}), session.IsOnline(), symbolExist, or.modifyBuyOrder)
+		}), session.IsOnline(), s.IsTradable(), or.modifyBuyOrder)
 	ordersGroup.Delete("/:sym/buy",
 		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 			OrderCancel: true,
-		}), session.IsOnline(), symbolExist, or.cancelBuyOrder)
+		}), session.IsOnline(), s.IsTradable(), or.cancelBuyOrder)
 	ordersGroup.Post("/:sym/sell",
 		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 			OrderCreate: true,
-		}), session.IsOnline(), symbolExist, or.sellOrder)
+		}), session.IsOnline(), s.IsTradable(), or.sellOrder)
 	ordersGroup.Patch("/:sym/sell",
 		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 			OrderModify: true,
-		}), session.IsOnline(), symbolExist, or.modifySellOrder)
+		}), session.IsOnline(), s.IsTradable(), or.modifySellOrder)
 	ordersGroup.Delete("/:sym/sell",
 		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
 			OrderCancel: true,
-		}), session.IsOnline(), symbolExist, or.cancelSellOrder)
+		}), session.IsOnline(), s.IsTradable(), or.cancelSellOrder)
 }
 
 // @Summary 주문 조회
@@ -76,54 +66,9 @@ func (or *OrdersRouter) getOrders(c *fiber.Ctx) error {
 	symbol := c.Params("sym")
 	user := c.Locals("user").(*postgresql.User)
 
-	orders := make([]t.OrderStatus, 0)
-
-	depth := ws.TempDepth[symbol]
-	// 매수 주문
-	for price, orderList := range depth.Bids {
-		for _, order := range orderList {
-			if order.UserID == user.ID {
-				orders = append(orders, t.OrderStatus{
-					OrderID: order.OrderID,
-					Side:    t.SideBuy,
-					OrderType: func() string {
-						if price == 0 {
-							return t.OrderTypeMarket
-						} else {
-							return t.OrderTypeLimit
-						}
-					}(),
-					Price:    price,
-					Quantity: order.Quantity,
-				})
-			}
-		}
-	}
-
-	// 매도 주문
-	for price, orderList := range depth.Asks {
-		for _, order := range orderList {
-			if order.UserID == user.ID {
-				orders = append(orders, t.OrderStatus{
-					OrderID: order.OrderID,
-					Side:    t.SideSell,
-					OrderType: func() string {
-						if price == 0 {
-							return t.OrderTypeMarket
-						} else {
-							return t.OrderTypeLimit
-						}
-					}(),
-					Price:    price,
-					Quantity: order.Quantity,
-				})
-			}
-		}
-	}
-
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"symbol": symbol,
-		"orders": orders,
+		"orders": user.Username,
 	})
 }
 
@@ -163,7 +108,7 @@ func (or *OrdersRouter) buyOrder(c *fiber.Ctx) error {
 
 	// 주문 처리
 	select {
-	case exchanges.OP.OrderRequestChan <- orderRequest:
+	case channels.OP.OrderRequestChan <- orderRequest:
 	case <-time.After(5 * time.Second):
 		return t.ErrorHandler(c, fiber.StatusServiceUnavailable, "Order processing is busy, please try again later")
 	}
@@ -214,7 +159,7 @@ func (or *OrdersRouter) modifyBuyOrder(c *fiber.Ctx) error {
 
 	// 주문 처리
 	select {
-	case exchanges.OP.OrderRequestChan <- orderRequest:
+	case channels.OP.OrderRequestChan <- orderRequest:
 	case <-time.After(5 * time.Second):
 		return t.ErrorHandler(c, fiber.StatusServiceUnavailable, "Order processing is busy, please try again later")
 	}
@@ -265,7 +210,7 @@ func (or *OrdersRouter) cancelBuyOrder(c *fiber.Ctx) error {
 
 	// 주문 처리
 	select {
-	case exchanges.OP.OrderRequestChan <- orderRequest:
+	case channels.OP.OrderRequestChan <- orderRequest:
 	case <-time.After(5 * time.Second):
 		return t.ErrorHandler(c, fiber.StatusServiceUnavailable, "Order processing is busy, please try again later")
 	}
@@ -320,7 +265,7 @@ func (or *OrdersRouter) sellOrder(c *fiber.Ctx) error {
 
 	// 주문 처리
 	select {
-	case exchanges.OP.OrderRequestChan <- orderRequest:
+	case channels.OP.OrderRequestChan <- orderRequest:
 	case <-time.After(5 * time.Second):
 		return t.ErrorHandler(c, fiber.StatusServiceUnavailable, "Order processing is busy, please try again later")
 	}
@@ -372,7 +317,7 @@ func (or *OrdersRouter) modifySellOrder(c *fiber.Ctx) error {
 
 	// 주문 처리
 	select {
-	case exchanges.OP.OrderRequestChan <- orderRequest:
+	case channels.OP.OrderRequestChan <- orderRequest:
 	case <-time.After(5 * time.Second):
 		return t.ErrorHandler(c, fiber.StatusServiceUnavailable, "Order processing is busy, please try again later")
 	}
@@ -423,7 +368,7 @@ func (or *OrdersRouter) cancelSellOrder(c *fiber.Ctx) error {
 
 	// 주문 처리
 	select {
-	case exchanges.OP.OrderRequestChan <- orderRequest:
+	case channels.OP.OrderRequestChan <- orderRequest:
 	case <-time.After(5 * time.Second):
 		return t.ErrorHandler(c, fiber.StatusServiceUnavailable, "Order processing is busy, please try again later")
 	}

@@ -5,6 +5,7 @@ import (
 	"PJS_Exchange/databases"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/exchanges"
+	"PJS_Exchange/exchanges/channels"
 	router "PJS_Exchange/routes"
 	"PJS_Exchange/sys"
 	"PJS_Exchange/utils"
@@ -35,10 +36,10 @@ func main() {
 	defer st.Close()
 
 	// 거래 처리 시스템 초기화
-	exo := exchanges.NewProcessOrders()
+	exo := channels.NewProcessOrders()
 	go exo.Create()
 	defer exo.Destroy()
-	exchanges.OP = exo
+	channels.OP = exo
 
 	// Redis 초기화
 	redisClient := databases.NewRedisClient()
@@ -56,7 +57,7 @@ func main() {
 	_ = exchanges.UpdateMarketStatus()
 	println("Loaded exchange: " + ex.Name + " in " + ex.Country + " | Session: " + exchanges.MarketStatus)
 
-	go exchanges.RunWorkerPool()
+	go channels.RunWorkerPool()
 
 	// Fiber 앱 생성
 	sv := fiber.New(fiber.Config{

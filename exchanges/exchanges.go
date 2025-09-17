@@ -87,8 +87,8 @@ func Edit(e *ExchangeType) error {
 	return nil
 }
 
-// GetCurrentSession 현재 세션 반환
-func GetCurrentSession() string {
+// getCurrentSession 현재 세션 반환
+func getCurrentSession() string {
 	e, err := Load()
 	if err != nil {
 		return "cannot_load"
@@ -152,8 +152,8 @@ func GetCurrentSession() string {
 	return "closed"
 }
 
-// getOpenedTime 오늘 장 시작 시간 반환 (없으면 nil)
-func getOpenedTime() *time.Time {
+// GetChangeSessionTime 오늘 세션이 변경되는 시간 반환 (없으면 nil)
+func GetChangeSessionTime() *map[string]time.Time {
 	e, err := Load()
 	if err != nil {
 		return nil
@@ -174,28 +174,55 @@ func getOpenedTime() *time.Time {
 	}
 
 	pre := Session{}
+	regular := Session{}
+	post := Session{}
 	if anniversary.Date != "" {
 		// 기념일 세션 사용
 		pre = anniversary.PreMarketSessions
+		regular = anniversary.RegularTradingSessions
+		post = anniversary.PostMarketSessions
 	} else {
 		// 일반 세션 사용
 		pre = e.PreMarketSessions[weekday]
+		regular = e.RegularTradingSessions[weekday]
+		post = e.PostMarketSessions[weekday]
 	}
 
-	if pre.Open == nil {
+	changeTimes := make(map[string]time.Time)
+
+	if pre.Open != nil {
+		preOpen, err := time.Parse("15:04", *pre.Open)
+		if err == nil {
+			changeTimes["pre"] = preOpen
+		}
+	}
+	if regular.Open != nil {
+		regularOpen, err := time.Parse("15:04", *regular.Open)
+		if err == nil {
+			changeTimes["regular"] = regularOpen
+		}
+	}
+	if post.Open != nil {
+		postOpen, err := time.Parse("15:04", *post.Open)
+		if err == nil {
+			changeTimes["post"] = postOpen
+		}
+	}
+	if post.Close != nil {
+		postClose, err := time.Parse("15:04", *post.Close)
+		if err == nil {
+			changeTimes["closed"] = postClose
+		}
+	}
+
+	if len(changeTimes) == 0 {
 		return nil
 	}
-
-	openedTime, err := time.Parse("15:04", *pre.Open)
-	if err != nil {
-		return nil
-	}
-
-	return &openedTime
+	return &changeTimes
 }
 
 func UpdateMarketStatus() error {
-	tmp := GetCurrentSession()
+	tmp := getCurrentSession()
 	if tmp != "cannot_load" {
 		MarketStatus = tmp
 		return nil

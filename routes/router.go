@@ -117,6 +117,7 @@ func registerWebSocketRoutes(router fiber.Router) {
 		&ws.DepthRouter{},
 		&ws.LedgerRouter{},
 		&ws.NotifyRouter{},
+		&ws.SessionRouter{},
 		// 새로운 라우터가 추가되면 여기에 추가
 	}
 

@@ -21,19 +21,19 @@ type Status struct {
 }
 
 type Symbol struct {
-	ID                   int      `json:"id"`
-	Symbol               string   `json:"symbol"`
-	Name                 string   `json:"name"`
-	Detail               string   `json:"detail"`
-	Url                  string   `json:"url"`
-	Logo                 string   `json:"logo"`
-	Market               string   `json:"market"`
-	Type                 string   `json:"type"` // "stock", "index" 등
-	MinimumOrderQuantity float32  `json:"minimum_order_quantity"`
-	TickSize             float32  `json:"tick_size"`
-	TotalStocks          int64    `json:"total_stocks"`
-	Tags                 []string `json:"tags,omitempty"`
-	Status               Status   `json:"status"`
+	ID                   int             `json:"id"`
+	Symbol               string          `json:"symbol"`
+	Name                 string          `json:"name"`
+	Detail               string          `json:"detail"`
+	Url                  string          `json:"url"`
+	Logo                 string          `json:"logo"`
+	Market               string          `json:"market"`
+	Type                 string          `json:"type"` // "stock", "index" 등
+	MinimumOrderQuantity float32         `json:"minimum_order_quantity"`
+	TickSize             float32         `json:"tick_size"`
+	TotalStocks          int64           `json:"total_stocks"`
+	Tags                 map[string]bool `json:"tags"`
+	Status               Status          `json:"status"`
 }
 
 type SymbolRepository interface {
@@ -61,7 +61,7 @@ func (r *SymbolDBRepository) CreateSymbolsTable(ctx context.Context) error {
 		minimum_order_quantity REAL DEFAULT 1,
 		tick_size REAL DEFAULT 1,
 		total_stocks BIGINT DEFAULT 0,
-		tags TEXT[],
+		tags JSONB DEFAULT '{}'::jsonb,
 		status JSONB DEFAULT '{"status": "inactive", "reason": ""}'::jsonb
 	);
 	`

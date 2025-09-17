@@ -1,5 +1,17 @@
 package template
 
+import (
+	"github.com/google/btree"
+)
+
+/* B-Tree */
+
+type Float64Item float64
+
+func (a Float64Item) Less(b btree.Item) bool {
+	return a < b.(Float64Item)
+}
+
 /* Market/Order Types */
 
 var (
@@ -72,16 +84,17 @@ type CancelOrderRequest struct {
 /* Depth WebSocket */
 
 type Order struct {
-	UserID   int    `json:"userID"`
-	OrderID  string `json:"orderID"`
-	Quantity int    `json:"quantity"`
+	UserID   int `json:"userID"`
+	Quantity int `json:"quantity"`
 }
 
 type MarketDepth struct {
-	Bids      map[float64][]Order `json:"bids"`
-	Asks      map[float64][]Order `json:"asks"`
-	TotalBids map[float64]int     `json:"totalBids"`
-	TotalAsks map[float64]int     `json:"totalAsks"`
+	Bids      map[float64]map[string]Order `json:"bids"`
+	Asks      map[float64]map[string]Order `json:"asks"`
+	TotalBids map[float64]int              `json:"totalBids"`
+	TotalAsks map[float64]int              `json:"totalAsks"`
+	TopBid    *btree.BTree                 `json:"topBid"`
+	BottomAsk *btree.BTree                 `json:"bottomAsk"`
 }
 
 /* Ledger WebSocket */
@@ -91,4 +104,10 @@ type Ledger struct {
 	Symbol    string  `json:"symbol"`
 	Price     float64 `json:"price"`
 	Volume    int     `json:"volume"`
+}
+
+/* Session WebSocket */
+
+type SessionStatus struct {
+	Session string `json:"session"`
 }

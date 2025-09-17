@@ -63,6 +63,26 @@ func (hub *WSHub) RegisterClient(client *Client) {
 	connMap.Store(client.ConnID, client)
 }
 
+func (hub *WSHub) DisconnectAll() {
+	hub.clients.Range(func(_, v interface{}) bool {
+		connMap := v.(*sync.Map)
+		connMap.Range(func(_, v interface{}) bool {
+			client := v.(*Client)
+			err := client.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+			if err != nil {
+				return false
+			}
+			err = client.Conn.Close()
+			if err != nil {
+				log.Error("WebSocket 연결 종료 오류:", err)
+			}
+			return true
+		})
+		return true
+	})
+	hub.clients = sync.Map{} // 모든 클라이언트 맵 초기화
+}
+
 func (hub *WSHub) UnregisterClient(client *Client) {
 	if conns, ok := hub.clients.Load(client.ID); ok {
 		connMap := conns.(*sync.Map)

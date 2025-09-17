@@ -1,4 +1,4 @@
-package exchanges
+package channels
 
 import (
 	"PJS_Exchange/routes/ws"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/websocket/v2"
+	"github.com/google/btree"
 )
 
 var (
@@ -46,13 +47,15 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 	timestamp := time.Now().UnixMilli()
 	depth := ws.TempDepth[orderReq.Symbol]
 	depthOrderIDIndex := ws.TempDepthOrderIDIndex[orderReq.Symbol]
+	depthPriceOrder := ws.TempDepthPriceOrder[orderReq.Symbol]
+	bidAskOverLabCheck := ws.TempBidAskOverlapCheck[orderReq.Symbol]
 
-	// depth | Asks, Bids가 nil이면 초기화
+	// depth | Asks, Bids, TotalAsks, TotalBids, TopBid, BottomAsk가 nil이면 초기화
 	if depth.Asks == nil {
-		depth.Asks = make(map[float64][]t.Order)
+		depth.Asks = make(map[float64]map[string]t.Order)
 	}
 	if depth.Bids == nil {
-		depth.Bids = make(map[float64][]t.Order)
+		depth.Bids = make(map[float64]map[string]t.Order)
 	}
 	if depth.TotalAsks == nil {
 		depth.TotalAsks = make(map[float64]int)
@@ -60,10 +63,28 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 	if depth.TotalBids == nil {
 		depth.TotalBids = make(map[float64]int)
 	}
+	if depth.TopBid == nil {
+		depth.TopBid = btree.New(4)
+	}
+	if depth.BottomAsk == nil {
+		depth.BottomAsk = btree.New(4)
+	}
 
 	// depthOrderIDIndex | nil이면 초기화
-	if depthOrderIDIndex == nil { // (OrderID: [userID, side, price, quantity, index])
+	if depthOrderIDIndex == nil { // (OrderID: [userID, side, price, quantity])
 		depthOrderIDIndex = make(map[string][]interface{})
+	}
+
+	// depthPriceOrder | nil이면 초기화
+	if depthPriceOrder == nil { // (price: {"bids": [orderID1, orderID2], "asks": [orderID3, orderID4]})
+		depthPriceOrder = make(map[string]map[float64][]string)
+		depthPriceOrder["bids"] = make(map[float64][]string)
+		depthPriceOrder["asks"] = make(map[float64][]string)
+	}
+
+	// bidAskOverLabCheck | nil이면 초기화
+	if bidAskOverLabCheck == nil { // (price: true)
+		bidAskOverLabCheck = make(map[float64]bool)
 	}
 
 	//입력 검증 | OrderID, OrderType, Price, Quantity
@@ -167,7 +188,7 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 		switch orderReq.Status {
 		case t.StatusOpen:
 			// 신규 주문 처리 로직
-			processOpen(&orderReq, &depth, &depthOrderIDIndex)
+			processOpen(&orderReq, &depth, &depthOrderIDIndex, &bidAskOverLabCheck, &depthPriceOrder)
 
 			timestamp = time.Now().UnixMilli()
 			// 호가 갱신 브로드캐스트
@@ -186,7 +207,7 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 			ws.NotifyHub.SendMessageToUser(orderReq.UserID, timestamp, websocket.TextMessage, newOrderRequest)
 		case t.StatusModified:
 			// 주문 수정 처리 로직
-			processModify(&orderReq, &depth, &depthOrderIDIndex)
+			processModify(&orderReq, &depth, &depthOrderIDIndex, &bidAskOverLabCheck, &depthPriceOrder)
 
 			timestamp = time.Now().UnixMilli()
 			// 호가 갱신 브로드캐스트
@@ -205,7 +226,7 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 			ws.NotifyHub.SendMessageToUser(orderReq.UserID, timestamp, websocket.TextMessage, newOrderRequest)
 		case t.StatusCanceled:
 			// 주문 취소 처리 로직
-			processCancel(&orderReq, &depth, &depthOrderIDIndex)
+			processCancel(&orderReq, &depth, &depthOrderIDIndex, &bidAskOverLabCheck, &depthPriceOrder)
 
 			timestamp = time.Now().UnixMilli()
 			// 호가 갱신 브로드캐스트
@@ -229,7 +250,7 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 		switch orderReq.Status {
 		case t.StatusOpen:
 			// 신규 주문 처리 로직
-			processOpen(&orderReq, &depth, &depthOrderIDIndex)
+			processOpen(&orderReq, &depth, &depthOrderIDIndex, &bidAskOverLabCheck, &depthPriceOrder)
 
 			timestamp = time.Now().UnixMilli()
 			// 호가 갱신 브로드캐스트
@@ -248,7 +269,7 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 			ws.NotifyHub.SendMessageToUser(orderReq.UserID, timestamp, websocket.TextMessage, newOrderRequest)
 		case t.StatusModified:
 			// 주문 수정 처리 로직
-			processModify(&orderReq, &depth, &depthOrderIDIndex)
+			processModify(&orderReq, &depth, &depthOrderIDIndex, &bidAskOverLabCheck, &depthPriceOrder)
 
 			timestamp = time.Now().UnixMilli()
 			// 호가 갱신 브로드캐스트
@@ -267,7 +288,7 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 			ws.NotifyHub.SendMessageToUser(orderReq.UserID, timestamp, websocket.TextMessage, newOrderRequest)
 		case t.StatusCanceled:
 			// 주문 취소 처리 로직
-			processCancel(&orderReq, &depth, &depthOrderIDIndex)
+			processCancel(&orderReq, &depth, &depthOrderIDIndex, &bidAskOverLabCheck, &depthPriceOrder)
 
 			timestamp = time.Now().UnixMilli()
 			// 호가 갱신 브로드캐스트
@@ -288,22 +309,29 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 	}
 
 	// 주문 처리
-	processOrder(&orderReq, &depth, &depthOrderIDIndex)
+	processOrder(&orderReq, &depth, &depthOrderIDIndex, &bidAskOverLabCheck)
 
 	// 변경된 데이터 저장
 	ws.TempDepth[orderReq.Symbol] = depth
 	ws.TempDepthOrderIDIndex[orderReq.Symbol] = depthOrderIDIndex
-	//log.Println("Updated Depth:", depth)
-	//log.Println("Updated DepthIndex:", depthOrderIDIndex)
+	ws.TempDepthPriceOrder[orderReq.Symbol] = depthPriceOrder
+	ws.TempBidAskOverlapCheck[orderReq.Symbol] = bidAskOverLabCheck
+	log.Println("---- Order Processed ----")
+	log.Println("Updated Depth:", depth)
+	log.Println("Updated DepthOrderIDIndex:", depthOrderIDIndex)
+	log.Println("Updated DepthPriceOrder:", depthPriceOrder)
+	log.Println("Checking Depth.TopBid:", depth.TopBid)
+	log.Println("Checking Depth.BottomAsk:", depth.BottomAsk)
+	log.Printf("Updated TempBidAskOverlapCheck for %s: %+v", orderReq.Symbol, bidAskOverLabCheck)
+	log.Println("---- Order Processed ----")
 	return
 }
 
-func processOpen(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}) {
+func processOpen(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}, bao *map[float64]bool, dpo *map[string]map[float64][]string) {
 	//log.Printf("processOpen called with Order: %+v", o)
 	price := o.Price
 	order := t.Order{
 		UserID:   o.UserID,
-		OrderID:  o.OrderID,
 		Quantity: o.Quantity,
 	}
 	side := ""
@@ -313,54 +341,84 @@ func processOpen(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface
 	case t.SideBuy:
 		side = "bid"
 		// 호가에 추가
-		d.Bids[price] = append(d.Bids[price], order)
+		if d.Bids[price] == nil {
+			d.Bids[price] = make(map[string]t.Order)
+		}
+		d.Bids[price][o.OrderID] = order
 
 		// 전체 주문 수량에 반영
 		d.TotalBids[price] += o.Quantity
+
+		// 매수 호가가 가장 높은 경우 갱신
+		if maxPrice := d.TopBid.Max(); d.TopBid.Len() == 0 || maxPrice.(t.Float64Item) < t.Float64Item(price) {
+			d.TopBid.ReplaceOrInsert(t.Float64Item(price))
+		}
+
+		// 매수 호가와 매도 호가가 겹치는 경우 체크
+		if _, exists := d.Asks[price]; exists {
+			(*bao)[price] = true
+		}
+
+		// 가격대별 주문 순서에 추가
+		(*dpo)["bids"][price] = append((*dpo)["bids"][price], o.OrderID)
 	case t.SideSell:
 		side = "ask"
 		// 호가에 추가
-		d.Asks[price] = append(d.Asks[price], order)
+		if d.Asks[price] == nil {
+			d.Asks[price] = make(map[string]t.Order)
+		}
+		d.Asks[price][o.OrderID] = order
 
 		// 전체 주문 수량에 반영
 		d.TotalAsks[price] += o.Quantity
+
+		// 매도 호가가 가장 낮은 경우 갱신
+		if minPrice := d.BottomAsk.Min(); d.BottomAsk.Len() == 0 || minPrice.(t.Float64Item) > t.Float64Item(price) {
+			d.BottomAsk.ReplaceOrInsert(t.Float64Item(price))
+		}
+
+		// 매수 호가와 매도 호가가 겹치는 경우 체크
+		if _, exists := d.Bids[price]; exists {
+			(*bao)[price] = true
+		}
+
+		// 가격대별 주문 순서에 추가
+		(*dpo)["asks"][price] = append((*dpo)["asks"][price], o.OrderID)
 	}
 
-	// 인덱스 맵에 추가
-	(*di)[o.OrderID] = make([]interface{}, 5)
+	// OrderID 인덱스 맵에 추가
+	(*di)[o.OrderID] = make([]interface{}, 4)
 	(*di)[o.OrderID][0] = o.UserID
 	(*di)[o.OrderID][1] = side
 	(*di)[o.OrderID][2] = price
 	(*di)[o.OrderID][3] = o.Quantity
-	if side == "bid" {
-		(*di)[o.OrderID][4] = len(d.Bids[price]) - 1 // index
-	} else {
-		(*di)[o.OrderID][4] = len(d.Asks[price]) - 1 // index
-	}
 	//log.Printf("Order %s added to depth at price %.2f with quantity %d", o.OrderID, price, o.Quantity)
 }
 
-func processModify(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}) {
+func processModify(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}, bao *map[float64]bool, dpo *map[string]map[float64][]string) {
 	//log.Printf("processModify called with Order: %+v", o)
 	previousQuantity := (*di)[o.OrderID][3].(int)
 
 	if o.Quantity < previousQuantity && o.Price == (*di)[o.OrderID][2].(float64) {
-		// 단일 주문에서 수량을 줄이는 경우는 우선순위 유지
+		// 가격을 유지하고 수량을 줄이는 경우는 우선순위 유지
 		price := (*di)[o.OrderID][2].(float64)
-		index := (*di)[o.OrderID][4].(int)
 		switch o.Side {
 		case t.SideBuy:
-			if bids, ok := d.Bids[price]; ok {
-				bids[index].Quantity = o.Quantity
-				d.Bids[price] = bids
+			if _, ok := d.Bids[price]; ok {
+				d.Bids[price][o.OrderID] = t.Order{
+					UserID:   o.UserID,
+					Quantity: o.Quantity,
+				}
 
 				d.TotalBids[price] -= previousQuantity
 				d.TotalBids[price] += o.Quantity
 			}
 		case t.SideSell:
-			if asks, ok := d.Asks[price]; ok {
-				asks[index].Quantity = o.Quantity
-				d.Asks[price] = asks
+			if _, ok := d.Asks[price]; ok {
+				d.Asks[price][o.OrderID] = t.Order{
+					UserID:   o.UserID,
+					Quantity: o.Quantity,
+				}
 
 				d.TotalAsks[price] -= previousQuantity
 				d.TotalAsks[price] += o.Quantity
@@ -371,24 +429,23 @@ func processModify(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interfa
 		(*di)[o.OrderID][3] = o.Quantity
 	} else {
 		// 단일 주문에서 수량을 늘리거나 가격(+시장가, 지정가 변경)을 변경하는 경우는 우선순위 재조정
-		processCancel(o, d, di)
-		processOpen(o, d, di)
+		processCancel(o, d, di, bao, dpo)
+		processOpen(o, d, di, bao, dpo)
 		return
 	}
 	//log.Printf("Order %s modified in depth to quantity %d", o.OrderID, o.Quantity)
 }
 
-func processCancel(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}) {
+func processCancel(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}, bao *map[float64]bool, dpo *map[string]map[float64][]string) {
 	//log.Printf("processCancel called with Order: %+v", o)
 	price := (*di)[o.OrderID][2].(float64)
-	index := (*di)[o.OrderID][4].(int)
 
 	// depth에서 삭제
 	switch o.Side {
 	case t.SideBuy:
-		if bids, ok := d.Bids[price]; ok {
+		if _, ok := d.Bids[price]; ok {
 			// 호가 조정
-			d.Bids[price] = append(bids[:index], bids[index+1:]...)
+			delete(d.Bids[price], o.OrderID)
 			// 더이상 호가에 값이 없는 경우 삭제
 			if len(d.Bids[price]) == 0 {
 				delete(d.Bids, price)
@@ -399,11 +456,35 @@ func processCancel(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interfa
 			if d.TotalBids[price] <= 0 {
 				delete(d.TotalBids, price)
 			}
+
+			// 내 호가에 나만 남아있는 경우 체크
+			if _, exists := d.Bids[price]; !exists {
+				// TopBid에서 삭제
+				d.TopBid.Delete(t.Float64Item(price))
+
+				// 매수 호가와 매도 호가가 더이상 겹치지 않음
+				delete(*bao, price)
+			}
+
+			// 가격대별 주문 순서에서 삭제
+			if orderIDs, exists := (*dpo)["bids"][price]; exists {
+				for i, id := range orderIDs {
+					if id == o.OrderID {
+						// 슬라이스에서 해당 주문 ID 제거
+						(*dpo)["bids"][price] = append(orderIDs[:i], orderIDs[i+1:]...)
+						break
+					}
+				}
+				// 만약 해당 가격대에 더 이상 주문이 없다면 맵에서 삭제
+				if len((*dpo)["bids"][price]) == 0 {
+					delete((*dpo)["bids"], price)
+				}
+			}
 		}
 	case t.SideSell:
-		if asks, ok := d.Asks[price]; ok {
+		if _, ok := d.Asks[price]; ok {
 			// 호가 조정
-			d.Asks[price] = append(asks[:index], asks[index+1:]...)
+			delete(d.Asks[price], o.OrderID)
 			// 더이상 호가에 값이 없는 경우 삭제
 			if len(d.Asks[price]) == 0 {
 				delete(d.Asks, price)
@@ -414,6 +495,30 @@ func processCancel(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interfa
 			if d.TotalAsks[price] <= 0 {
 				delete(d.TotalAsks, price)
 			}
+
+			// 내 호가에 나만 남아있는 경우 체크
+			if _, exists := d.Asks[price]; !exists {
+				// BottomAsk에서 삭제
+				d.BottomAsk.Delete(t.Float64Item(price))
+
+				// 매수 호가와 매도 호가가 더이상 겹치지 않음
+				delete(*bao, price)
+			}
+
+			// 가격대별 주문 순서에서 삭제
+			if orderIDs, exists := (*dpo)["asks"][price]; exists {
+				for i, id := range orderIDs {
+					if id == o.OrderID {
+						// 슬라이스에서 해당 주문 ID 제거
+						(*dpo)["asks"][price] = append(orderIDs[:i], orderIDs[i+1:]...)
+						break
+					}
+				}
+				// 만약 해당 가격대에 더 이상 주문이 없다면 맵에서 삭제
+				if len((*dpo)["asks"][price]) == 0 {
+					delete((*dpo)["asks"], price)
+				}
+			}
 		}
 	}
 
@@ -422,7 +527,13 @@ func processCancel(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interfa
 	//log.Printf("Order %s canceled and removed from depth", o.OrderID)
 }
 
-func processOrder(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}) {
+func processOrder(o *t.OrderRequest, d *t.MarketDepth, di *map[string][]interface{}, bao *map[float64]bool) {
 	log.Printf("processOrder called with Order: %+v", o)
+
+	if o.OrderType == t.OrderTypeMarket {
+		// 시장가 주문 처리
+	} else {
+		// 지정가 주문 처리
+	}
 	log.Printf("Order processing completed")
 }

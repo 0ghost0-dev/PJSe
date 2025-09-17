@@ -187,7 +187,7 @@ func APIKeyMiddlewareRequireScopes(config Config, requireScopes postgresql.APIKe
 
 		// 인증 성공, 다음 미들웨어 또는 핸들러로 진행
 		c.Locals("apiKey", apiKey)
-		c.Locals("user", &user)
+		c.Locals("user", user)
 
 		//user := postgresql.User{ // 테스트용
 		//	ID:       1,
