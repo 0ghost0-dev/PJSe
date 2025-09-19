@@ -33,10 +33,11 @@ func (sr *SessionRouter) RegisterRoutes(router fiber.Router) {
 // @description	실시간 세션 상태 데이터를 WebSocket을 통해 구독합니다.
 // @tags		WebSocket
 // @produce		json
+// @Param			Authorization	header		string				true	"Bearer {API_KEY}"
 // @success		200	{string}	string	"WebSocket 연결 성공 및 구독 시작 메시지"
 // @failure		400	{object}	map[string]string	"잘못된 요청"
 // @failure		500	{object}	map[string]string	"서버 오류"
-// @router		/ws/status [get]
+// @router		/ws/session [get]
 func (sr *SessionRouter) handleStatus(c *websocket.Conn) {
 	user := c.Locals("user").(*postgresql.User)
 

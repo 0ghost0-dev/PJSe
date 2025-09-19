@@ -120,7 +120,42 @@ func (r *SymbolDBRepository) GetSymbols(ctx context.Context) (*[]Symbol, error) 
 		sym := Symbol{}
 		var statusJSON []byte
 
-		err := rows.Scan(&sym.ID, &sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
+		err = rows.Scan(&sym.ID, &sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
+			&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &sym.IPOPrice, &statusJSON)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(statusJSON, &sym.Status)
+		if err != nil {
+			return nil, err
+		}
+
+		symbols = append(symbols, sym)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &symbols, nil
+}
+
+func (r *SymbolDBRepository) GetSymbolsViewable(ctx context.Context) (*[]Symbol, error) {
+	query := `SELECT  symbol, name, detail, url, logo, market, type, minimum_order_quantity, tick_size, total_stocks, ipo_price, status FROM symbols WHERE status->>'status' IN ($1, $2, $3)`
+	rows, err := r.db.GetPool().Query(ctx, query, StatusActive, StatusInactive, StatusSuspended)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var symbols []Symbol
+
+	for rows.Next() {
+		sym := Symbol{}
+		var statusJSON []byte
+
+		err = rows.Scan(&sym.Symbol, &sym.Name, &sym.Detail, &sym.Url, &sym.Logo,
 			&sym.Market, &sym.Type, &sym.MinimumOrderQuantity, &sym.TickSize, &sym.TotalStocks, &sym.IPOPrice, &statusJSON)
 		if err != nil {
 			return nil, err

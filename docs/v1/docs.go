@@ -2042,6 +2042,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/market/symbol/{symbol}/now": {
+            "get": {
+                "description": "특정 심볼의 현재가 정보를 반환합니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market - Status"
+                ],
+                "summary": "특정 심볼 현재가 조회",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "심볼 (예: NVDA)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "성공 시 심볼 현재가 정보 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "심볼을 찾을 수 없을 때 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류 발생 시 에러 메시지 반환",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/ws/depth": {
             "get": {
                 "description": "일일 실시간 호가 데이터를 WebSocket을 통해 구독합니다.",
@@ -2228,7 +2294,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/ws/status": {
+        "/ws/session": {
             "get": {
                 "description": "실시간 세션 상태 데이터를 WebSocket을 통해 구독합니다.",
                 "produces": [
@@ -2238,6 +2304,15 @@ const docTemplate = `{
                     "WebSocket"
                 ],
                 "summary": "Session WebSocket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer {API_KEY}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "WebSocket 연결 성공 및 구독 시작 메시지",
