@@ -2,7 +2,6 @@ package main
 
 import (
 	"PJS_Exchange/app/postgresApp"
-	"PJS_Exchange/databases"
 	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/exchanges"
 	"PJS_Exchange/exchanges/channels"
@@ -42,13 +41,13 @@ func main() {
 	channels.OP = exo
 
 	// Redis 초기화
-	redisClient := databases.NewRedisClient()
-	defer func(redisClient *databases.RedisClient) {
-		err := redisClient.Close()
-		if err != nil {
-			println("Failed to close Redis client: " + err.Error())
-		}
-	}(redisClient)
+	//redisClient := databases.NewRedisClient()
+	//defer func(redisClient *databases.RedisClient) {
+	//	err := redisClient.Close()
+	//	if err != nil {
+	//		println("Failed to close Redis client: " + err.Error())
+	//	}
+	//}(redisClient)
 
 	ex, err := exchanges.Load()
 	if err != nil {
@@ -73,6 +72,9 @@ func main() {
 			})
 		},
 	})
+
+	// 프로파일러 미들웨어 (배포시 제거 하기)
+	//sv.Use(pprof.New())
 
 	sv.Use(recover.New())
 	sv.Use(logger.New())

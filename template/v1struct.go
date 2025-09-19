@@ -31,6 +31,8 @@ var (
 	StatusError           = "error"
 	Bids                  = "bids"
 	Asks                  = "asks"
+	MarketOrderIOC        = "IOC" // Immediate Or Cancel
+	MarketOrderFOK        = "FOK" // Fill Or Kill
 )
 
 type OrderStatus struct {
@@ -52,7 +54,7 @@ type OrderRequest struct {
 	Price           float64     `json:"price"`
 	Quantity        int         `json:"quantity"`
 	Slippage        []float64   `json:"slippage,omitempty"`          // optional, for market orders [base_price, max_slippage_percent]
-	MarketOrderType string      `json:"market_order_type,omitempty"` // optional, for market orders IOC or FOK
+	MarketOrderType string      `json:"market_order_type,omitempty"` // optional, for market orders IOC or FOK default is IOC
 	ResultChan      chan Result `json:"-"`                           // for server to send back result
 }
 

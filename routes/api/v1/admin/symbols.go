@@ -193,9 +193,9 @@ func (sr *SymbolRouter) enableTradeSymbol(c *fiber.Ctx) error {
 		}
 		send, _ := json.Marshal(ledger)
 		if ws.TempLedger[symbolParam] == nil {
-			ws.TempLedger[symbolParam] = utils.NewQueue()
+			ws.TempLedger[symbolParam] = utils.NewChunkedStore[template.Ledger](128)
 		}
-		ws.TempLedger[symbolParam].PushFront(ledger)
+		ws.TempLedger[symbolParam].Append(ledger)
 		ws.LedgerHub.BroadcastMessage(time.Now().UnixMilli(), websocket.TextMessage, send)
 	}
 

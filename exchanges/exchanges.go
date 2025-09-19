@@ -69,23 +69,23 @@ func Load() (*ExchangeType, error) {
 	return cachedExchange, nil
 }
 
-// Edit 반드시 Load 후에 호출할 것
-func Edit(e *ExchangeType) error {
-	data, err := json.MarshalIndent(e, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile("./exchanges/PJSe.json", data, 0644)
-	if err != nil {
-		return err
-	}
-
-	// 캐시 초기화
-	cachedExchange = nil
-
-	return nil
-}
+// Deprecated: Edit is never used. Please edit manually.
+//func Edit(e *ExchangeType) error {
+//	data, err := json.MarshalIndent(e, "", "  ")
+//	if err != nil {
+//		return err
+//	}
+//
+//	err = os.WriteFile("./exchanges/PJSe.json", data, 0644)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// 캐시 초기화
+//	cachedExchange = nil
+//
+//	return nil
+//}
 
 // getCurrentSession 현재 세션 반환
 func getCurrentSession() string {
