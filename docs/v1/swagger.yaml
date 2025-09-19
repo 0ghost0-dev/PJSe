@@ -15,6 +15,8 @@ definitions:
         type: string
       id:
         type: integer
+      ipo_price:
+        type: number
       logo:
         type: string
       market:
@@ -28,9 +30,9 @@ definitions:
       symbol:
         type: string
       tags:
-        items:
-          type: string
-        type: array
+        additionalProperties:
+          type: boolean
+        type: object
       tick_size:
         type: number
       total_stocks:
@@ -362,6 +364,11 @@ paths:
         name: symbol
         required: true
         type: string
+      - description: 상장가 (
+        format: float64
+        in: header
+        name: price
+        type: number
       - description: Bearer {API_KEY}
         in: header
         name: Authorization
@@ -1444,50 +1451,6 @@ paths:
       summary: 특정 심볼 정보 조회
       tags:
       - Market - Status
-  /api/v1/market/symbol/{symbol}/now:
-    get:
-      description: 특정 심볼의 현재가 정보를 반환합니다.
-      parameters:
-      - description: '심볼 (예: NVDA)'
-        in: path
-        name: symbol
-        required: true
-        type: string
-      - description: Bearer {API_KEY}
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 성공 시 심볼 현재가 정보 반환
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: 인증 실패 시 에러 메시지 반환
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: 심볼을 찾을 수 없을 때 에러 메시지 반환
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 서버 오류 발생 시 에러 메시지 반환
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: 특정 심볼 현재가 조회
-      tags:
-      - Market - Status
   /ws/depth:
     get:
       description: 일일 실시간 호가 데이터를 WebSocket을 통해 구독합니다.
@@ -1609,6 +1572,31 @@ paths:
               type: string
             type: object
       summary: Notify WebSocket
+      tags:
+      - WebSocket
+  /ws/status:
+    get:
+      description: 실시간 세션 상태 데이터를 WebSocket을 통해 구독합니다.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: WebSocket 연결 성공 및 구독 시작 메시지
+          schema:
+            type: string
+        "400":
+          description: 잘못된 요청
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 서버 오류
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Session WebSocket
       tags:
       - WebSocket
 swagger: "2.0"
