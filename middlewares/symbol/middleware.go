@@ -40,7 +40,14 @@ func IsViewable() fiber.Handler {
 			})
 		}
 
-		symbolData, _ := postgresApp.Get().SymbolRepo().GetSymbolData(c.Context(), symbol)
+		symbolData, err := postgresApp.Get().SymbolRepo().GetSymbolData(c.Context(), symbol)
+		if err != nil || symbolData.Status.Status == "" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Symbol '" + symbol + "' is not listed.",
+				"code":  fiber.StatusNotFound,
+			})
+		}
+
 		switch symbolData.Status.Status {
 		case postgresql.StatusActive:
 		case postgresql.StatusSuspended:
