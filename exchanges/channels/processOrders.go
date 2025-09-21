@@ -801,7 +801,7 @@ func buyMarketOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *
 		}
 		askOrder := askOrders[*askOrderID]
 		tradableQuantity := askOrder.Quantity
-		if tradableQuantity >= *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
+		if tradableQuantity > *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
 			executedQuantity += *remainingQuantity
 
 			// 체결된 주문만큼 호가에서 수량 차감
@@ -931,7 +931,7 @@ func sellMarketOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex 
 		}
 		bidOrder := bidOrders[*bidOrderID]
 		tradableQuantity := bidOrder.Quantity
-		if tradableQuantity >= *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
+		if tradableQuantity > *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
 			executedQuantity += *remainingQuantity
 
 			// 체결된 주문만큼 호가에서 수량 차감
