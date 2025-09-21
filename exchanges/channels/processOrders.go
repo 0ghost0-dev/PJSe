@@ -555,8 +555,8 @@ func processOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *ma
 			}
 		case t.SideSell:
 			// 매도 시장가 주문 처리
-			highBid := depth.BidTree.Max()
-			if highBid == nil {
+			bidLen := depth.BidTree.Len()
+			if bidLen == 0 {
 				// 매수 호가가 없으면 주문 취소
 				//log.Printf("No bids available to match market sell order")
 				processCancel(orderReq, depth, depthIndex, bidAskOverLab, executionSeq)
@@ -613,9 +613,9 @@ func processOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *ma
 				// 슬리피지 설정이 있는 경우
 				//log.Printf("Market Sell Order with Slippage: Checking slippage limits")
 				minSlippagePrice := orderReq.Slippage[0] * (1 - orderReq.Slippage[1]/100)
-				if float64(highBid.(t.Float64Item)) < minSlippagePrice {
+				if currentPrice < minSlippagePrice {
 					// 최소 슬리피지 가격보다 낮으면 주문 취소
-					//log.Printf("Highest bid price %.2f is below min slippage price %.2f. Cancelling order.", float64(highBid.(t.Float64Item)), minSlippagePrice)
+					//log.Printf("Highest bid price %.2f is below min slippage price %.2f. Cancelling order.", currentPrice, minSlippagePrice)
 					processCancel(orderReq, depth, depthIndex, bidAskOverLab, executionSeq)
 
 					timestamp := time.Now().UnixMilli()
