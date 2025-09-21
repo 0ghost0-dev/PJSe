@@ -690,7 +690,7 @@ func processMarketOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthInd
 		})
 	}
 
-	if remainingQuantity > 0 {
+	if remainingQuantity >= 0 {
 		// 남은 수량이 있으면 주문 취소
 		processCancel(orderReq, depth, depthIndex, bidAskOverLab, executionSeq)
 		timestamp := time.Now().UnixMilli()
