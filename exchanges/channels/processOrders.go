@@ -644,14 +644,14 @@ func processOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *ma
 		switch orderReq.Side {
 		case t.SideBuy:
 			// 매수 지정가 주문 처리
-			if (*bidAskOverLab).Get(t.Float64Item(orderReq.Price)) == nil || (depth.AskTree.Min() != nil && depth.AskTree.Min().(t.Float64Item) > t.Float64Item(orderReq.Price)) {
+			if (*bidAskOverLab).Get(t.Float64Item(orderReq.Price)) == nil && (depth.AskTree.Min() == nil || depth.AskTree.Min().(t.Float64Item) > t.Float64Item(orderReq.Price)) {
 				// 매수 호가와 매도 호가가 겹치지 않으면 체결 불가
 				//log.Println("No overlapping bids and asks, skipping order matching")
 				return
 			}
 		case t.SideSell:
 			// 매도 지정가 주문 처리
-			if (*bidAskOverLab).Get(t.Float64Item(orderReq.Price)) == nil || (depth.BidTree.Max() != nil && depth.BidTree.Max().(t.Float64Item) < t.Float64Item(orderReq.Price)) {
+			if (*bidAskOverLab).Get(t.Float64Item(orderReq.Price)) == nil && (depth.BidTree.Max() == nil || depth.BidTree.Max().(t.Float64Item) < t.Float64Item(orderReq.Price)) {
 				// 매수 호가와 매도 호가가 겹치지 않으면 체결 불가
 				//log.Println("No overlapping bids and asks, skipping order matching")
 				return
@@ -801,7 +801,7 @@ func buyMarketOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *
 		}
 		askOrder := askOrders[*askOrderID]
 		tradableQuantity := askOrder.Quantity
-		if tradableQuantity > *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
+		if tradableQuantity >= *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
 			executedQuantity += *remainingQuantity
 
 			// 체결된 주문만큼 호가에서 수량 차감
@@ -931,7 +931,7 @@ func sellMarketOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex 
 		}
 		bidOrder := bidOrders[*bidOrderID]
 		tradableQuantity := bidOrder.Quantity
-		if tradableQuantity > *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
+		if tradableQuantity >= *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
 			executedQuantity += *remainingQuantity
 
 			// 체결된 주문만큼 호가에서 수량 차감
