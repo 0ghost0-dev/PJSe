@@ -1053,7 +1053,7 @@ func buyLimitOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *m
 			break
 		}
 		askOrder := depth.Asks[orderReq.Price][*askOrderID]
-		if askOrder.Quantity > *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
+		if askOrder.Quantity >= *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
 			executedQuantity += *remainingQuantity
 
 			// 체결된 주문만큼 호가에서 수량 차감
@@ -1179,7 +1179,7 @@ func sellLimitOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *
 			break
 		}
 		bidOrder := depth.Bids[orderReq.Price][*bidOrderID]
-		if bidOrder.Quantity > *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
+		if bidOrder.Quantity >= *remainingQuantity { // 체결 가능한 수량이 남은 수량보다 많으면 전부 체결
 			executedQuantity += *remainingQuantity
 
 			// 체결된 주문만큼 호가에서 수량 차감

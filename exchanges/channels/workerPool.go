@@ -44,17 +44,26 @@ func processGetSession() error {
 		return fmt.Errorf("UpdateMarketStatus error: %v", err)
 	}
 
-	// 프리장 시작 5분 전, 1분 전 알림
+	// 프리장 시작 30분 전, 5분 전, 1분 전 알림
 	sessionTime := exchanges.GetChangeSessionTime()
 	if sessionTime == nil {
 		return nil
 	}
 
+	preT := (*sessionTime)["pre"].Add(-30 * time.Minute)
 	preF := (*sessionTime)["pre"].Add(-5 * time.Minute)
 	preO := (*sessionTime)["pre"].Add(-1 * time.Minute)
 	nowTime, _ := time.Parse("15:04", time.Now().Format("15:04"))
 
-	if nowTime.Equal(preF) {
+	if nowTime.Equal(preT) {
+		sender, err := json.Marshal(template.SessionStatus{
+			Session: "pre-30m",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to marshal session status: %v", err)
+		}
+		ws.SessionHub.BroadcastMessage(time.Now().UnixMilli(), websocket.TextMessage, sender)
+	} else if nowTime.Equal(preF) {
 		sender, err := json.Marshal(template.SessionStatus{
 			Session: "pre-5m",
 		})
@@ -102,7 +111,7 @@ func processClearExpiredAPIKeys() error {
 }
 
 func processClearRedisCache() error {
-	// 프리장 시작 10분 전에 Redis 캐시 비우기
+	// 프리장 시작 30분 전에 Redis 캐시 비우기
 	sessionTime := exchanges.GetChangeSessionTime()
 	if sessionTime == nil {
 		return nil
@@ -110,7 +119,7 @@ func processClearRedisCache() error {
 
 	preOpen := (*sessionTime)["pre"]
 	nowTime, _ := time.Parse("15:04", time.Now().Format("15:04"))
-	if exchanges.MarketStatus == "closed" && nowTime.Equal(preOpen.Add(-10*time.Minute)) {
+	if exchanges.MarketStatus == "closed" && nowTime.Equal(preOpen.Add(-30*time.Minute)) {
 		// TODO: Redis 캐시 비우기
 		return nil
 	}
