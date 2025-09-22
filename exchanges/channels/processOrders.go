@@ -362,6 +362,10 @@ func processModify(orderRequest *t.OrderRequest, depth *t.MarketDepth, depthInde
 
 func processCancel(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *map[string][]interface{}, bidAskOverLab *btree.BTree, executionSeq *map[string]map[float64]*utils.Queue[string]) {
 	//log.Printf("processCancel called with Order: %+v", orderReq)
+	if (*depthIndex)[orderReq.OrderID] == nil {
+		// 이미 취소된 주문이거나 존재하지 않는 주문
+		return
+	}
 	price := (*depthIndex)[orderReq.OrderID][2].(float64)
 
 	// depth에서 삭제
