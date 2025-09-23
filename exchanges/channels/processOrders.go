@@ -193,6 +193,31 @@ func (po *ProcessOrders) processOrderRequest(orderReq t.OrderRequest) {
 		processOpen(&orderReq, &depth, &depthOrderIDIndex, bidAskOverLabCheck, &depthExecutionSeq)
 	case t.StatusModified:
 		// 주문 수정 처리 로직
+		if orderReq.Price != depthOrderIDIndex[orderReq.OrderID][2].(float64) { // 가격이 변경되었을때만 브로드캐스트
+			timestamp = time.Now().UnixMilli()
+
+			switch orderReq.Side {
+			case t.SideBuy:
+				orderReq.Timestamp = timestamp
+				broadcastDepth(t.UpdateDepth{
+					Timestamp: timestamp,
+					Symbol:    orderReq.Symbol,
+					Side:      t.Bids,
+					Price:     depthOrderIDIndex[orderReq.OrderID][2].(float64),
+					Quantity:  depth.TotalBids[depthOrderIDIndex[orderReq.OrderID][2].(float64)] - depthOrderIDIndex[orderReq.OrderID][3].(int),
+				})
+			case t.SideSell:
+				orderReq.Timestamp = timestamp
+				broadcastDepth(t.UpdateDepth{
+					Timestamp: timestamp,
+					Symbol:    orderReq.Symbol,
+					Side:      t.Asks,
+					Price:     depthOrderIDIndex[orderReq.OrderID][2].(float64),
+					Quantity:  depth.TotalAsks[depthOrderIDIndex[orderReq.OrderID][2].(float64)] - depthOrderIDIndex[orderReq.OrderID][3].(int),
+				})
+			}
+		}
+
 		processModify(&orderReq, &depth, &depthOrderIDIndex, bidAskOverLabCheck, &depthExecutionSeq)
 	case t.StatusCanceled:
 		// 주문 취소 처리 로직

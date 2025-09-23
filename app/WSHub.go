@@ -247,3 +247,9 @@ func (hub *WSHub) SendMessageToUserSince(client *Client, since string) {
 		client.syncLock.Unlock()
 	}()
 }
+
+func (hub *WSHub) ClearMessages() {
+	hub.lock.Lock()
+	hub.messages = nil
+	hub.lock.Unlock()
+}

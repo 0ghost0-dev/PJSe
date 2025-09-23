@@ -121,6 +121,10 @@ func processClearRedisCache() error {
 	nowTime, _ := time.Parse("15:04", time.Now().Format("15:04"))
 	if exchanges.MarketStatus == "closed" && nowTime.Equal(preOpen.Add(-30*time.Minute)) {
 		// TODO: Redis 캐시 비우기
+		ws.ClearTempDepthData()
+		ws.ClearTempLedgerData()
+		ws.ClearTempNotifyData()
+		log.Println("Redis 캐시가 비워졌습니다.")
 		return nil
 	}
 	return nil

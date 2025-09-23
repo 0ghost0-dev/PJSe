@@ -17,6 +17,10 @@ var (
 	NotifyHub = app.NewWSHub(false)
 )
 
+func ClearTempNotifyData() {
+	NotifyHub.ClearMessages()
+}
+
 type NotifyRouter struct{}
 
 func (nr *NotifyRouter) RegisterRoutes(router fiber.Router) {

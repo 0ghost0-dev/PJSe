@@ -20,6 +20,11 @@ var (
 	TempLedger = make(map[string]*utils.ChunkedStore[template.Ledger]) // 심볼별 임시 원장 데이터 저장용 (예: "NVDA" : [{Timestamp: ..., Price: ..., Volume: ...}, ...])
 )
 
+func ClearTempLedgerData() {
+	LedgerHub.ClearMessages()
+	TempLedger = make(map[string]*utils.ChunkedStore[template.Ledger])
+}
+
 type LedgerRouter struct{}
 
 func (lr *LedgerRouter) RegisterRoutes(router fiber.Router) {

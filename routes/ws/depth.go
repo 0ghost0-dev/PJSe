@@ -24,6 +24,14 @@ var (
 	TempBidAskOverlapCheck = make(map[string]*btree.BTree)                                // 심볼별 매수/매도 가격 중복 체크용 (예: "NVDA" : btree.BTree{}
 )
 
+func ClearTempDepthData() {
+	DepthHub.ClearMessages()
+	TempDepth = make(map[string]template.MarketDepth)
+	TempDepthOrderIDIndex = make(map[string]map[string][]interface{})
+	TempDepthExecutionSeq = make(map[string]map[string]map[float64]*utils.Queue[string])
+	TempBidAskOverlapCheck = make(map[string]*btree.BTree)
+}
+
 type DepthRouter struct{}
 
 func (dr *DepthRouter) RegisterRoutes(router fiber.Router) {
