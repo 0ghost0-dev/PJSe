@@ -1,8 +1,6 @@
 package routes
 
 import (
-	v1 "PJS_Exchange/routes/api/v1"
-	v1admin "PJS_Exchange/routes/api/v1/admin"
 	v1market "PJS_Exchange/routes/api/v1/market"
 	"PJS_Exchange/routes/ws"
 	"PJS_Exchange/utils"
@@ -42,8 +40,6 @@ func SetupAPIRoutes(app *fiber.App) {
 	apiV1Market := apiV1.Group("/market")
 
 	// 각 버전 및 도메인의 라우터 등록
-	registerV1Routes(apiV1)
-	registerV1AdminRoutes(apiV1Admin)
 	registerV1MarketRoutes(apiV1Market)
 }
 
@@ -64,41 +60,11 @@ func SetupWebSocketRoutes(app *fiber.App) {
 	registerWebSocketRoutes(_ws)
 }
 
-// registerV1Routes v1 API 라우터들을 자동으로 등록
-func registerV1Routes(router fiber.Router) {
-	// 각 도메인의 라우터 인스턴스 생성 및 등록
-	routers := []RouteRegistrar{
-		&v1.AuthRouter{},
-		&v1.HealthRouter{},
-		// 새로운 라우터가 추가되면 여기에 추가
-	}
-
-	for _, r := range routers {
-		r.RegisterRoutes(router)
-	}
-}
-
-// registerV1AdminRoutes v1 Admin API 라우터들을 자동으로 등록
-func registerV1AdminRoutes(router fiber.Router) {
-	// 각 도메인의 라우터 인스턴스 생성 및 등록
-	routers := []RouteRegistrar{
-		&v1admin.UserRouter{},
-		&v1admin.SymbolRouter{},
-		&v1admin.ActivationRouter{},
-		// 새로운 라우터가 추가되면 여기에 추가
-	}
-
-	for _, r := range routers {
-		r.RegisterRoutes(router)
-	}
-}
-
 // registerV1MarketRoutes v1 Market API 라우터들을 자동으로 등록
 func registerV1MarketRoutes(router fiber.Router) {
 	// 각 도메인의 라우터 인스턴스 생성 및 등록
 	routers := []RouteRegistrar{
 		&v1market.StatusRouter{},
-		&v1market.CandlesRouter{},
 		&v1market.OrdersRouter{},
 		&v1market.SymbolsRouter{},
 		// 새로운 라우터가 추가되면 여기에 추가

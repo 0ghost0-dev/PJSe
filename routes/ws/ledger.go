@@ -2,8 +2,6 @@ package ws
 
 import (
 	"PJS_Exchange/app"
-	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"PJS_Exchange/utils"
 	"context"
@@ -28,9 +26,7 @@ func ClearTempLedgerData() {
 type LedgerRouter struct{}
 
 func (lr *LedgerRouter) RegisterRoutes(router fiber.Router) {
-	ledgerGroup := router.Group("/ledger", auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-		MarketDataRead: true,
-	}))
+	ledgerGroup := router.Group("/ledger")
 
 	ledgerGroup.Get("/", websocket.New(lr.handleLedger))
 }
@@ -49,12 +45,11 @@ func (lr *LedgerRouter) RegisterRoutes(router fiber.Router) {
 // @router		/ws/ledger [get]
 func (lr *LedgerRouter) handleLedger(c *websocket.Conn) {
 	since := c.Query("since", "-1")
-	user := c.Locals("user").(*postgresql.User)
 
 	client := &app.Client{
-		ID:       user.ID,
+		ID:       1,
 		ConnID:   uuid.NewString(),
-		Username: user.Username,
+		Username: "ledger_user",
 		Conn:     c,
 		Syncing:  since != "-1",
 	}
@@ -66,10 +61,10 @@ func (lr *LedgerRouter) handleLedger(c *websocket.Conn) {
 	)
 
 	LedgerHub.RegisterClient(client)
-	log.Printf("User %s subscribed to ledger updates since %s", user.Username, since)
+	log.Printf("User subscribed to ledger updates since %s", since)
 	defer func() {
 		LedgerHub.UnregisterClient(client)
-		log.Printf("User %s unsubscribed from ledger updates", user.Username)
+		log.Printf("User unsubscribed from ledger updates")
 	}()
 
 	// PING/PONG 관리용 고루틴

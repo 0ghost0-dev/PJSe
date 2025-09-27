@@ -2,7 +2,6 @@ package market
 
 import (
 	"PJS_Exchange/exchanges"
-	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"time"
 
@@ -16,14 +15,14 @@ func (sr *StatusRouter) RegisterRoutes(router fiber.Router) {
 	statusGroup := router.Group("/status")
 
 	statusGroup.Use(limiter.New(limiter.Config{
-		Max:        10, // 최대 요청 수
+		Max:        999999999, // 최대 요청 수
 		Expiration: 60 * time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
 			return template.ErrorHandler(c,
 				fiber.StatusTooManyRequests,
 				"Too many requests. Please try again later.")
 		},
-	}), auth.APIKeyMiddleware(auth.Config{Bypass: false}))
+	}))
 
 	statusGroup.Get("/", sr.getExchangeData)
 	statusGroup.Get("/session", sr.getSession)

@@ -2,9 +2,7 @@ package ws
 
 import (
 	"PJS_Exchange/app"
-	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/exchanges"
-	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"context"
 	"encoding/json"
@@ -25,7 +23,7 @@ type SessionRouter struct{}
 func (sr *SessionRouter) RegisterRoutes(router fiber.Router) {
 	SessionGroup := router.Group("/session")
 
-	SessionGroup.Get("/", auth.APIKeyMiddleware(auth.Config{Bypass: false}), websocket.New(sr.handleStatus))
+	SessionGroup.Get("/", websocket.New(sr.handleStatus))
 }
 
 // TODO 추후 protobuf로 변경
@@ -39,12 +37,11 @@ func (sr *SessionRouter) RegisterRoutes(router fiber.Router) {
 // @failure		500	{object}	map[string]string	"서버 오류"
 // @router		/ws/session [get]
 func (sr *SessionRouter) handleStatus(c *websocket.Conn) {
-	user := c.Locals("user").(*postgresql.User)
 
 	client := &app.Client{
-		ID:       user.ID,
+		ID:       1,
 		ConnID:   uuid.NewString(),
-		Username: user.Username,
+		Username: "session_user",
 		Conn:     c,
 		Syncing:  false,
 	}
@@ -60,7 +57,7 @@ func (sr *SessionRouter) handleStatus(c *websocket.Conn) {
 		Session: exchanges.MarketStatus,
 	})
 	if err != nil {
-		log.Printf("Failed to marshal session status for user %s: %v", user.Username, err)
+		log.Printf("Failed to marshal session status for user: %v", err)
 		return
 	}
 	err = c.WriteMessage(websocket.TextMessage, session)
@@ -69,10 +66,10 @@ func (sr *SessionRouter) handleStatus(c *websocket.Conn) {
 	}
 
 	SessionHub.RegisterClient(client)
-	log.Printf("User %s subscribed to session updates", user.Username)
+	log.Printf("User subscribed to session updates")
 	defer func() {
 		SessionHub.UnregisterClient(client)
-		log.Printf("User %s unsubscribed from session updates", user.Username)
+		log.Printf("User unsubscribed from session updates")
 	}()
 
 	// PING/PONG 관리용 고루틴

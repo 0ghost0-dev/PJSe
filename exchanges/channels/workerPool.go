@@ -1,11 +1,9 @@
 package channels
 
 import (
-	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/exchanges"
 	"PJS_Exchange/routes/ws"
 	"PJS_Exchange/template"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -26,8 +24,6 @@ func processJob(job Job) error {
 	switch job.Type {
 	case "get_session":
 		return processGetSession()
-	case "clear_expired_api_keys":
-		return processClearExpiredAPIKeys()
 	case "clear_redis_cache":
 		return processClearRedisCache()
 	}
@@ -103,11 +99,6 @@ func processGetSession() error {
 		})
 	}
 	return nil
-}
-
-func processClearExpiredAPIKeys() error {
-	ctx := context.Background()
-	return postgresApp.Get().APIKeyRepo().CleanupExpiredKeys(ctx)
 }
 
 func processClearRedisCache() error {

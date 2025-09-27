@@ -1,10 +1,6 @@
 package market
 
 import (
-	"PJS_Exchange/app/postgresApp"
-	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middlewares/auth"
-	s "PJS_Exchange/middlewares/symbol"
 	"PJS_Exchange/routes/ws"
 	"PJS_Exchange/template"
 	"time"
@@ -19,20 +15,18 @@ func (sr *SymbolsRouter) RegisterRoutes(router fiber.Router) {
 	symbolsGroup := router.Group("/symbols")
 
 	symbolsGroup.Use(limiter.New(limiter.Config{
-		Max:        10, // 최대 요청 수
+		Max:        999999999, // 최대 요청 수
 		Expiration: 60 * time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
 			return template.ErrorHandler(c,
 				fiber.StatusTooManyRequests,
 				"Too many requests. Please try again later.")
 		},
-	}), auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-		MarketSymbolRead: true,
 	}))
 
 	symbolsGroup.Get("/", sr.symbolList)
-	symbolsGroup.Get("/:sym", s.IsViewable(), sr.symbolDetail)
-	symbolsGroup.Get("/:sym/now", s.IsViewable(), sr.symbolNow)
+	symbolsGroup.Get("/:sym", sr.symbolDetail)
+	symbolsGroup.Get("/:sym/now", sr.symbolNow)
 }
 
 // === 핸들러 함수들 ===
@@ -48,10 +42,23 @@ func (sr *SymbolsRouter) RegisterRoutes(router fiber.Router) {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/market/symbol [get]
 func (sr *SymbolsRouter) symbolList(c *fiber.Ctx) error {
-	symbols, err := postgresApp.Get().SymbolRepo().GetSymbolsViewable(c.Context())
-	if err != nil {
-		return template.ErrorHandler(c, fiber.StatusInternalServerError, "Error fetching symbols")
-	}
+	symbols := []interface{}{map[string]interface{}{
+		"symbol":                 "TST",
+		"name":                   "(주) 테스트네트웍스",
+		"detail":                 "테스트 회사입니다.",
+		"url":                    "https://example.com",
+		"logo":                   "https://example.com/logo.png",
+		"market":                 "PJSe",
+		"type":                   "stock",
+		"minimum_order_quantity": 1,
+		"tick_size":              1,
+		"total_shares":           100000,
+		"ipo_price":              12500,
+		"status": map[string]interface{}{
+			"status": "active",
+			"reason": "",
+		},
+	}}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"symbols": symbols,
@@ -71,10 +78,23 @@ func (sr *SymbolsRouter) symbolList(c *fiber.Ctx) error {
 // @Failure		401				{object}	map[string]string	"인증 실패 시 에러 메시지 반환"
 // @Router			/api/v1/market/symbol/{symbol} [get]
 func (sr *SymbolsRouter) symbolDetail(c *fiber.Ctx) error {
-	symbol := c.Locals("symbolData").(*postgresql.Symbol)
-
-	// 일부 블라인드 처리
-	symbol.ID = -1
+	symbol := map[string]interface{}{
+		"symbol":                 "test",
+		"name":                   "(주) 테스트네트웍스",
+		"detail":                 "테스트 회사입니다.",
+		"url":                    "https://example.com",
+		"logo":                   "https://example.com/logo.png",
+		"market":                 "PJSe",
+		"type":                   "stock",
+		"minimum_order_quantity": 1,
+		"tick_size":              1,
+		"total_shares":           100000,
+		"ipo_price":              12500,
+		"status": map[string]interface{}{
+			"status": "active",
+			"reason": "",
+		},
+	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"symbol": symbol,
@@ -104,13 +124,7 @@ func (sr *SymbolsRouter) symbolNow(c *fiber.Ctx) error {
 		// TODO 전일 종가로 설정
 
 		// 전일 종가도 없으면 공모가로 설정 (단순 Fallback 용 아마 여기까지 올일은 없을듯)
-		ipoPrice, err := postgresApp.Get().SymbolRepo().GetIPOPrice(c.Context(), symbolParam)
-		if err != nil {
-			//log.Printf("Error fetching IPO price for %s: %v", symbolParam, err)
-			return template.ErrorHandler(c, fiber.StatusInternalServerError, "Error fetching current price")
-		} else {
-			currentPrice = ipoPrice
-		}
+		currentPrice = 12500
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

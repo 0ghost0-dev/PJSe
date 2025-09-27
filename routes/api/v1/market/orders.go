@@ -1,11 +1,8 @@
 package market
 
 import (
-	"PJS_Exchange/databases/postgresql"
 	"PJS_Exchange/exchanges/channels"
-	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/middlewares/session"
-	s "PJS_Exchange/middlewares/symbol"
 	t "PJS_Exchange/template"
 	"time"
 
@@ -18,34 +15,13 @@ type OrdersRouter struct{}
 func (or *OrdersRouter) RegisterRoutes(router fiber.Router) {
 	ordersGroup := router.Group("/orders")
 
-	ordersGroup.Get("/:sym",
-		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-			OrderRead: true,
-		}), session.IsOnline(), s.IsTradable(), or.getOrders)
-	ordersGroup.Post("/:sym/buy",
-		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-			OrderCreate: true,
-		}), session.IsOnline(), s.IsTradable(), or.buyOrder)
-	ordersGroup.Patch("/:sym/buy",
-		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-			OrderModify: true,
-		}), session.IsOnline(), s.IsTradable(), or.modifyBuyOrder)
-	ordersGroup.Delete("/:sym/buy",
-		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-			OrderCancel: true,
-		}), session.IsOnline(), s.IsTradable(), or.cancelBuyOrder)
-	ordersGroup.Post("/:sym/sell",
-		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-			OrderCreate: true,
-		}), session.IsOnline(), s.IsTradable(), or.sellOrder)
-	ordersGroup.Patch("/:sym/sell",
-		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-			OrderModify: true,
-		}), session.IsOnline(), s.IsTradable(), or.modifySellOrder)
-	ordersGroup.Delete("/:sym/sell",
-		auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-			OrderCancel: true,
-		}), session.IsOnline(), s.IsTradable(), or.cancelSellOrder)
+	ordersGroup.Get("/:sym", session.IsOnline(), or.getOrders)
+	ordersGroup.Post("/:sym/buy", session.IsOnline(), or.buyOrder)
+	ordersGroup.Patch("/:sym/buy", session.IsOnline(), or.modifyBuyOrder)
+	ordersGroup.Delete("/:sym/buy", session.IsOnline(), or.cancelBuyOrder)
+	ordersGroup.Post("/:sym/sell", session.IsOnline(), or.sellOrder)
+	ordersGroup.Patch("/:sym/sell", session.IsOnline(), or.modifySellOrder)
+	ordersGroup.Delete("/:sym/sell", session.IsOnline(), or.cancelSellOrder)
 }
 
 // @Summary 주문 조회
@@ -64,11 +40,10 @@ func (or *OrdersRouter) RegisterRoutes(router fiber.Router) {
 // @Router			/api/v1/market/orders/{symbol} [get]
 func (or *OrdersRouter) getOrders(c *fiber.Ctx) error {
 	symbol := c.Params("sym")
-	user := c.Locals("user").(*postgresql.User)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"symbol": symbol,
-		"orders": user.Username,
+		"orders": "Test",
 	})
 }
 
@@ -99,7 +74,7 @@ func (or *OrdersRouter) buyOrder(c *fiber.Ctx) error {
 	}
 
 	// 서버 측에서 설정
-	orderRequest.UserID = c.Locals("user").(*postgresql.User).ID
+	orderRequest.UserID = 1
 	orderRequest.OrderID = uuid.NewString()
 	orderRequest.Symbol = symbol
 	orderRequest.Side = t.SideBuy
@@ -151,7 +126,7 @@ func (or *OrdersRouter) modifyBuyOrder(c *fiber.Ctx) error {
 		return t.ErrorHandler(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	orderRequest.UserID = c.Locals("user").(*postgresql.User).ID
+	orderRequest.UserID = 1
 	orderRequest.Symbol = symbol
 	orderRequest.Side = t.SideBuy
 	orderRequest.Status = t.StatusModified
@@ -202,7 +177,7 @@ func (or *OrdersRouter) cancelBuyOrder(c *fiber.Ctx) error {
 		return t.ErrorHandler(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	orderRequest.UserID = c.Locals("user").(*postgresql.User).ID
+	orderRequest.UserID = 1
 	orderRequest.Symbol = symbol
 	orderRequest.Side = t.SideBuy
 	orderRequest.Status = t.StatusCanceled
@@ -256,7 +231,7 @@ func (or *OrdersRouter) sellOrder(c *fiber.Ctx) error {
 	}
 
 	// 서버 측에서 설정
-	orderRequest.UserID = c.Locals("user").(*postgresql.User).ID
+	orderRequest.UserID = 1
 	orderRequest.OrderID = uuid.NewString()
 	orderRequest.Symbol = symbol
 	orderRequest.Side = t.SideSell
@@ -309,7 +284,7 @@ func (or *OrdersRouter) modifySellOrder(c *fiber.Ctx) error {
 	}
 
 	// 서버 측에서 설정
-	orderRequest.UserID = c.Locals("user").(*postgresql.User).ID
+	orderRequest.UserID = 1
 	orderRequest.Symbol = symbol
 	orderRequest.Side = t.SideSell
 	orderRequest.Status = t.StatusModified
@@ -360,7 +335,7 @@ func (or *OrdersRouter) cancelSellOrder(c *fiber.Ctx) error {
 		return t.ErrorHandler(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	orderRequest.UserID = c.Locals("user").(*postgresql.User).ID
+	orderRequest.UserID = 1
 	orderRequest.Symbol = symbol
 	orderRequest.Side = t.SideSell
 	orderRequest.Status = t.StatusCanceled

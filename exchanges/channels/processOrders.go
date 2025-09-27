@@ -1,12 +1,10 @@
 package channels
 
 import (
-	"PJS_Exchange/app/postgresApp"
 	"PJS_Exchange/exchanges"
 	"PJS_Exchange/routes/ws"
 	t "PJS_Exchange/template"
 	"PJS_Exchange/utils"
-	"context"
 	"encoding/json"
 	"log"
 	"time"
@@ -488,14 +486,7 @@ func processOrder(orderReq *t.OrderRequest, depth *t.MarketDepth, depthIndex *ma
 		// TODO 전일 종가로 설정
 
 		// 전일 종가도 없으면 공모가로 설정 (단순 Fallback 용 아마 여기까지 올일은 없을듯)
-		ctx := context.Background()
-		ipoPrice, err := postgresApp.Get().SymbolRepo().GetIPOPrice(ctx, orderReq.Symbol)
-		if err != nil {
-			log.Printf("Error fetching IPO price for %s: %v", orderReq.Symbol, err)
-			return
-		} else {
-			currentPrice = ipoPrice
-		}
+		currentPrice = 12500
 	}
 	//log.Printf("Current Price for %s: %.2f", orderReq.Symbol, currentPrice)
 

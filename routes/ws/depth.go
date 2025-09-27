@@ -2,8 +2,6 @@ package ws
 
 import (
 	"PJS_Exchange/app"
-	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middlewares/auth"
 	"PJS_Exchange/template"
 	"PJS_Exchange/utils"
 	"context"
@@ -35,9 +33,7 @@ func ClearTempDepthData() {
 type DepthRouter struct{}
 
 func (dr *DepthRouter) RegisterRoutes(router fiber.Router) {
-	depthGroup := router.Group("/depth", auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-		MarketDataRead: true,
-	}))
+	depthGroup := router.Group("/depth")
 
 	depthGroup.Get("/", websocket.New(dr.handleDepth))
 	//depthGroup.Get("/:sym", websocket.New(dr.handleSelDepth))
@@ -57,12 +53,11 @@ func (dr *DepthRouter) RegisterRoutes(router fiber.Router) {
 // @router		/ws/depth [get]
 func (dr *DepthRouter) handleDepth(c *websocket.Conn) {
 	since := c.Query("since", "-1")
-	user := c.Locals("user").(*postgresql.User)
 
 	client := &app.Client{
-		ID:       user.ID,
+		ID:       1,
 		ConnID:   uuid.NewString(),
-		Username: user.Username,
+		Username: "depth_user",
 		Conn:     c,
 		Syncing:  since != "-1",
 	}
@@ -74,10 +69,10 @@ func (dr *DepthRouter) handleDepth(c *websocket.Conn) {
 	)
 
 	DepthHub.RegisterClient(client)
-	log.Printf("User %s subscribed to depth updates since %s", user.Username, since)
+	log.Printf("User subscribed to depth updates since %s", since)
 	defer func() {
 		DepthHub.UnregisterClient(client)
-		log.Printf("User %s unsubscribed from depth updates", user.Username)
+		log.Printf("User unsubscribed from depth updates")
 	}()
 
 	// PING/PONG 관리용 고루틴

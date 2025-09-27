@@ -2,8 +2,6 @@ package ws
 
 import (
 	"PJS_Exchange/app"
-	"PJS_Exchange/databases/postgresql"
-	"PJS_Exchange/middlewares/auth"
 	"context"
 	"log"
 	"time"
@@ -24,9 +22,7 @@ func ClearTempNotifyData() {
 type NotifyRouter struct{}
 
 func (nr *NotifyRouter) RegisterRoutes(router fiber.Router) {
-	notifyGroup := router.Group("/notify", auth.APIKeyMiddlewareRequireScopes(auth.Config{Bypass: false}, postgresql.APIKeyScope{
-		OrderNotify: true,
-	}))
+	notifyGroup := router.Group("/notify")
 
 	notifyGroup.Get("/", websocket.New(nr.handleNotify))
 }
@@ -45,12 +41,11 @@ func (nr *NotifyRouter) RegisterRoutes(router fiber.Router) {
 // @router		/ws/notify [get]
 func (nr *NotifyRouter) handleNotify(c *websocket.Conn) {
 	since := c.Query("since", "-1")
-	user := c.Locals("user").(*postgresql.User)
 
 	client := &app.Client{
-		ID:       user.ID,
+		ID:       1,
 		ConnID:   uuid.NewString(),
-		Username: user.Username,
+		Username: "notify_user",
 		Conn:     c,
 		Syncing:  since != "-1",
 	}
@@ -62,10 +57,10 @@ func (nr *NotifyRouter) handleNotify(c *websocket.Conn) {
 	)
 
 	NotifyHub.RegisterClient(client)
-	log.Printf("User %s subscribed to notify updates since %s", user.Username, since)
+	log.Printf("User subscribed to notify updates since %s", since)
 	defer func() {
 		NotifyHub.UnregisterClient(client)
-		log.Printf("User %s unsubscribed from notify updates", user.Username)
+		log.Printf("User unsubscribed from notify updates")
 	}()
 
 	// PING/PONG 관리용 고루틴
